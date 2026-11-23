@@ -8,12 +8,14 @@ import type {
   MealId,
   MealMeta,
   MealsOn,
+  TempMeal,
+  TempMealItem,
   WeightEntry,
 } from '../types/nutrition';
 import { writeToIndexedDB } from './db';
 
 export const STORAGE_KEY = 'suivi-calories-v1';
-export const CURRENT_DB_VERSION = 4;
+export const CURRENT_DB_VERSION = 6;
 
 export function capitalizeFoodName(name: string): string {
   const trimmed = name.trim();
@@ -44,6 +46,7 @@ export const MEALS: MealMeta[] = [
 export function createFreshState(): AppState {
   return {
     foods: DEFAULT_FOODS_DB.map((f) => ({ ...f })),
+    tempMeals: [],
     goals: { k: 2000, p: 120, c: 220, f: 70, m: 'N', a: '1.55' },
     log: {},
     weights: [],
@@ -83,6 +86,9 @@ export function normalizeAppState(parsed: Partial<AppState>): AppState {
 
   return {
     foods,
+    tempMeals: Array.isArray(parsed.tempMeals)
+      ? (parsed.tempMeals as TempMeal[])
+      : [],
     goals: {
       k: parsed.goals?.k ?? 2000,
       p: parsed.goals?.p ?? 120,
@@ -101,6 +107,38 @@ export function normalizeAppState(parsed: Partial<AppState>): AppState {
     mealsOn: parsed.mealsOn ?? { b: true, l: true, d: true, o: true },
     theme: parsed.theme ?? 'light',
     dbVersion: CURRENT_DB_VERSION,
+  };
+}
+
+export function computeTempMealTotals(items: TempMealItem[]): {
+  totalG: number;
+  totalK: number;
+  totalP: number;
+  totalC: number;
+  totalF: number;
+  totalAl: number;
+} {
+  let totalG = 0;
+  let totalK = 0;
+  let totalP = 0;
+  let totalC = 0;
+  let totalF = 0;
+  let totalAl = 0;
+  for (const it of items) {
+    totalG += it.g || 0;
+    totalK += it.k || 0;
+    totalP += it.p || 0;
+    totalC += it.c || 0;
+    totalF += it.f || 0;
+    totalAl += it.al || 0;
+  }
+  return {
+    totalG: round1(totalG),
+    totalK: Math.round(totalK),
+    totalP: round1(totalP),
+    totalC: round1(totalC),
+    totalF: round1(totalF),
+    totalAl: round1(totalAl),
   };
 }
 
