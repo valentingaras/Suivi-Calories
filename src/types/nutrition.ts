@@ -20,6 +20,8 @@ export interface Food {
 export interface LogEntry {
   id: string;
   foodId?: string;
+  tempMealId?: string;
+  pct?: number;
   n: string;
   g: number;
   k: number;
@@ -28,6 +30,32 @@ export interface LogEntry {
   f: number;
   al?: number;
   m?: MealId;
+}
+
+export interface TempMealItem {
+  id: string;
+  kind: 'food' | 'custom';
+  foodId?: string;
+  n: string;
+  g: number;
+  k: number;
+  p: number;
+  c: number;
+  f: number;
+  al?: number;
+}
+
+export interface TempMeal {
+  id: string;
+  n: string;
+  items: TempMealItem[];
+  totalG: number;
+  totalK: number;
+  totalP: number;
+  totalC: number;
+  totalF: number;
+  totalAl?: number;
+  createdAt: string;
 }
 
 export interface Goals {
@@ -52,6 +80,7 @@ export type MealsOn = Record<MealId, boolean>;
 
 export interface AppState {
   foods: Food[];
+  tempMeals?: TempMeal[];
   goals: Goals;
   log: Record<string, LogEntry[]>;
   weights: WeightEntry[];
