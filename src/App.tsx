@@ -6,6 +6,7 @@ import {
   FoodActionModal,
   FoodFormModal,
   FoodPickerModal,
+  TempMealActionModal,
 } from './components/Modals';
 import { ParametresView } from './components/ParametresView';
 import { PeseeView } from './components/PeseeView';
@@ -20,6 +21,7 @@ import type {
   Goals,
   LogEntry,
   MealId,
+  TempMeal,
   ThemePreference,
 } from './types/nutrition';
 import { readFromIndexedDB } from './utils/db';
@@ -43,12 +45,16 @@ export default function App() {
     defaultMealForHour()
   );
   const [selectedFoodId, setSelectedFoodId] = useState<string>('');
+  const [selectedTempMealId, setSelectedTempMealId] = useState<string>('');
+  const [activeInputKind, setActiveInputKind] = useState<'food' | 'temp'>('food');
 
   // Modal states
   const [pickerOpen, setPickerOpen] = useState(false);
   const [foodFormState, setFoodFormState] = useState<{
     open: boolean;
     editing: Food | null;
+    editingTempMeal?: TempMeal | null;
+    initialFormTab?: 'food' | 'temp';
     autoFocusOff?: boolean;
     linkedEntry?: {
       date: string;
@@ -57,8 +63,16 @@ export default function App() {
       meal: MealId;
       returnEntry: LogEntry;
     } | null;
-  }>({ open: false, editing: null, autoFocusOff: false, linkedEntry: null });
+  }>({
+    open: false,
+    editing: null,
+    editingTempMeal: null,
+    initialFormTab: 'food',
+    autoFocusOff: false,
+    linkedEntry: null,
+  });
   const [actionFood, setActionFood] = useState<Food | null>(null);
+  const [actionTempMeal, setActionTempMeal] = useState<TempMeal | null>(null);
   const [editingEntry, setEditingEntry] = useState<LogEntry | null>(null);
   const [detailDayKey, setDetailDayKey] = useState<string | null>(null);
 
@@ -150,19 +164,113 @@ export default function App() {
     }));
   };
 
+  const handleAddTempMealPortion = (
+    dish: TempMeal,
+    percent: number,
+    meal: MealId
+  ) => {
+    const ratio = percent / 100;
+    const entry: LogEntry = {
+      id: `e${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      tempMealId: dish.id,
+      pct: round1(percent),
+      n: dish.n,
+      g: round1(dish.totalG * ratio),
+      k: dish.totalK * ratio,
+      p: dish.totalP * ratio,
+      c: dish.totalC * ratio,
+      f: dish.totalF * ratio,
+      al: round1((dish.totalAl || 0) * ratio),
+      m: meal,
+    };
+
+    updateState((prev) => ({
+      ...prev,
+      log: {
+        ...prev.log,
+        [currentDate]: [...(prev.log[currentDate] || []), entry],
+      },
+    }));
+  };
+
+  const handleSaveTempMeal = (
+    dishData: Omit<TempMeal, 'id' | 'createdAt'>,
+    existingId?: string
+  ) => {
+    const id =
+      existingId || `tm${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
+    updateState((prev) => {
+      const list = prev.tempMeals || [];
+      const existing = existingId
+        ? list.find((item) => item.id === existingId)
+        : undefined;
+      const saved: TempMeal = {
+        ...dishData,
+        id,
+        createdAt: existing ? existing.createdAt : new Date().toISOString(),
+      };
+      const nextList = existing
+        ? list.map((item) => (item.id === existingId ? saved : item))
+        : [saved, ...list];
+      return {
+        ...prev,
+        tempMeals: nextList,
+      };
+    });
+    setSelectedTempMealId(id);
+    setActiveInputKind('temp');
+    setFoodFormState({
+      open: false,
+      editing: null,
+      editingTempMeal: null,
+      initialFormTab: 'food',
+      autoFocusOff: false,
+      linkedEntry: null,
+    });
+  };
+
+  const handleDeleteTempMeal = (id: string) => {
+    const remaining = (state.tempMeals || []).filter((item) => item.id !== id);
+    updateState((prev) => ({
+      ...prev,
+      tempMeals: (prev.tempMeals || []).filter((item) => item.id !== id),
+    }));
+    if (selectedTempMealId === id) {
+      setSelectedTempMealId(remaining[0]?.id || '');
+    }
+    if (remaining.length === 0) {
+      setActiveInputKind('food');
+    }
+    setActionTempMeal(null);
+  };
+
   const handleUpdateEntry = (
     entryId: string,
-    newGrams: number,
+    newAmount: number,
     newMeal: MealId
   ) => {
     updateState((prev) => {
       const dayList = prev.log[currentDate] || [];
       const updated = dayList.map((x) => {
         if (x.id !== entryId) return x;
-        const r = newGrams / x.g;
+        if (x.pct && x.pct > 0) {
+          const r = newAmount / x.pct;
+          return {
+            ...x,
+            pct: round1(newAmount),
+            g: round1(x.g * r),
+            k: x.k * r,
+            p: x.p * r,
+            c: x.c * r,
+            f: x.f * r,
+            al: (x.al || 0) * r,
+            m: newMeal,
+          };
+        }
+        const r = x.g > 0 ? newAmount / x.g : 0;
         return {
           ...x,
-          g: newGrams,
+          g: newAmount,
           k: x.k * r,
           p: x.p * r,
           c: x.c * r,
@@ -279,8 +387,14 @@ export default function App() {
 
     if (!existingId && !linked) {
       setSelectedFoodId(savedId);
+      setActiveInputKind('food');
     }
-    setFoodFormState({ open: false, editing: null, linkedEntry: null });
+    setFoodFormState({
+      open: false,
+      editing: null,
+      editingTempMeal: null,
+      linkedEntry: null,
+    });
   };
 
   const handleDeleteFood = (foodId: string) => {
@@ -386,15 +500,26 @@ export default function App() {
             allLog={state.log}
             goals={state.goals}
             foods={state.foods}
+            tempMeals={state.tempMeals || []}
             mealsOn={state.mealsOn}
             activeMeal={activeMeal}
             onSelectMeal={setActiveMeal}
             selectedFoodId={selectedFoodId}
+            selectedTempMealId={selectedTempMealId}
+            activeInputKind={activeInputKind}
             onOpenFoodPicker={() => setPickerOpen(true)}
             onOpenNewFood={() =>
-              setFoodFormState({ open: true, editing: null })
+              setFoodFormState({
+                open: true,
+                editing: null,
+                editingTempMeal: null,
+                initialFormTab: 'food',
+                autoFocusOff: false,
+                linkedEntry: null,
+              })
             }
             onAddEntry={handleAddEntry}
+            onAddTempMealPortion={handleAddTempMealPortion}
             onOpenEntry={(entry) => setEditingEntry(entry)}
           />
         )}
@@ -419,10 +544,23 @@ export default function App() {
         {activeTab === 'alim' && (
           <AlimentsView
             foods={state.foods}
+            tempMeals={state.tempMeals || []}
             onNewFood={() =>
               setFoodFormState({
                 open: true,
                 editing: null,
+                editingTempMeal: null,
+                initialFormTab: 'food',
+                autoFocusOff: false,
+                linkedEntry: null,
+              })
+            }
+            onNewTempMeal={() =>
+              setFoodFormState({
+                open: true,
+                editing: null,
+                editingTempMeal: null,
+                initialFormTab: 'temp',
                 autoFocusOff: false,
                 linkedEntry: null,
               })
@@ -431,11 +569,14 @@ export default function App() {
               setFoodFormState({
                 open: true,
                 editing: null,
+                editingTempMeal: null,
+                initialFormTab: 'food',
                 autoFocusOff: true,
                 linkedEntry: null,
               })
             }
             onSelectFood={(food) => setActionFood(food)}
+            onSelectTempMeal={(dish) => setActionTempMeal(dish)}
             onImportCsvFoods={handleImportCsvFoods}
           />
         )}
@@ -459,9 +600,16 @@ export default function App() {
       <FoodPickerModal
         open={pickerOpen}
         foods={state.foods}
+        tempMeals={state.tempMeals || []}
         onClose={() => setPickerOpen(false)}
         onSelect={(id) => {
           setSelectedFoodId(id);
+          setActiveInputKind('food');
+          setPickerOpen(false);
+        }}
+        onSelectTempMeal={(id) => {
+          setSelectedTempMealId(id);
+          setActiveInputKind('temp');
           setPickerOpen(false);
         }}
       />
@@ -469,6 +617,9 @@ export default function App() {
       <FoodFormModal
         open={foodFormState.open}
         editingFood={foodFormState.editing}
+        editingTempMeal={foodFormState.editingTempMeal}
+        initialFormTab={foodFormState.initialFormTab}
+        foods={state.foods}
         autoFocusOff={foodFormState.autoFocusOff}
         helperNotice={
           foodFormState.linkedEntry
@@ -480,6 +631,8 @@ export default function App() {
           setFoodFormState({
             open: false,
             editing: null,
+            editingTempMeal: null,
+            initialFormTab: 'food',
             autoFocusOff: false,
             linkedEntry: null,
           });
@@ -488,6 +641,7 @@ export default function App() {
           }
         }}
         onSave={handleSaveFood}
+        onSaveTempMeal={handleSaveTempMeal}
       />
 
       <FoodActionModal
@@ -498,11 +652,36 @@ export default function App() {
           setFoodFormState({
             open: true,
             editing: food,
+            editingTempMeal: null,
+            initialFormTab: 'food',
             autoFocusOff: false,
             linkedEntry: null,
           });
         }}
         onDelete={handleDeleteFood}
+      />
+
+      <TempMealActionModal
+        dish={actionTempMeal}
+        onClose={() => setActionTempMeal(null)}
+        onUseInMeals={(dish) => {
+          setActionTempMeal(null);
+          setSelectedTempMealId(dish.id);
+          setActiveInputKind('temp');
+          setActiveTab('today');
+        }}
+        onEdit={(dish) => {
+          setActionTempMeal(null);
+          setFoodFormState({
+            open: true,
+            editing: null,
+            editingTempMeal: dish,
+            initialFormTab: 'temp',
+            autoFocusOff: false,
+            linkedEntry: null,
+          });
+        }}
+        onDelete={handleDeleteTempMeal}
       />
 
       <EntryEditModal
