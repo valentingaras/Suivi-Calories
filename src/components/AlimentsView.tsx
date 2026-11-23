@@ -1,26 +1,37 @@
 import { useMemo, useRef, useState } from 'react';
 import { ChevronRight, Globe, Plus, Search, Upload } from 'lucide-react';
-import type { Food } from '../types/nutrition';
-import { normText, parseFoodsCsv } from '../utils/nutrition';
+import { formatDecimalFr, normText, parseFoodsCsv } from '../utils/nutrition';
+import type { Food, TempMeal } from '../types/nutrition';
 
 interface AlimentsViewProps {
   foods: Food[];
+  tempMeals: TempMeal[];
   onNewFood: () => void;
+  onNewTempMeal: () => void;
   onSearchOnline: () => void;
   onSelectFood: (food: Food) => void;
+  onSelectTempMeal: (dish: TempMeal) => void;
   onImportCsvFoods: (importedFoods: Food[]) => number;
 }
 
 export function AlimentsView({
   foods,
+  tempMeals,
   onNewFood,
+  onNewTempMeal,
   onSearchOnline,
   onSelectFood,
+  onSelectTempMeal,
   onImportCsvFoods,
 }: AlimentsViewProps) {
   const [query, setQuery] = useState('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
+
+  const filteredTempMeals = useMemo(() => {
+    const q = normText(query.trim());
+    return tempMeals.filter((t) => !q || normText(t.n).includes(q));
+  }, [tempMeals, query]);
 
   const filtered = useMemo(() => {
     const q = normText(query.trim());
@@ -119,10 +130,85 @@ export function AlimentsView({
         </p>
       )}
 
+      {/* Temporary Dishes Category (above classic foods) */}
+      <section className="rounded-2xl border border-[#D4E8DC] bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(16,40,28,0.04)] dark:border-[#234132] dark:bg-[#16211B] dark:shadow-none">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-bold text-[#14231C] dark:text-[#EAF2ED]">
+              Plats temporaires ({filteredTempMeals.length})
+            </h2>
+            <p className="text-xs text-[#5B6E64] dark:text-[#98ABA0]">
+              Dosage en % du plat depuis Repas
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onNewTempMeal}
+            className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl bg-[#ECF8F1] px-3 py-1.5 text-xs font-semibold text-[#0B7B54] transition-colors hover:bg-[#DDF3E6] dark:bg-[#163627] dark:text-[#34D399] dark:hover:bg-[#1C4230] whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            Nouveau plat
+          </button>
+        </div>
+
+        {tempMeals.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-[#DCE5DF] bg-[#FAFDFB] px-4 py-4 text-center text-xs text-[#5B6E64] dark:border-[#28372E] dark:bg-[#121B16] dark:text-[#98ABA0]">
+            Aucun plat temporaire. Crée un plat cuisiné ou des macros libres
+            avec « + Nouveau plat » (ou depuis « + Nouvel aliment »).
+          </p>
+        ) : filteredTempMeals.length === 0 ? (
+          <p className="py-4 text-center text-xs text-[#5B6E64] dark:text-[#98ABA0]">
+            Aucun plat temporaire ne correspond à votre recherche.
+          </p>
+        ) : (
+          <ul className="divide-y divide-[#EDF2EE] dark:divide-[#233229]">
+            {filteredTempMeals.map((dish) => (
+              <li key={dish.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectTempMeal(dish)}
+                  aria-haspopup="dialog"
+                  className="flex min-h-[56px] w-full items-center justify-between gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-[#F5F9F6] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0D9464] dark:hover:bg-[#1C2A22] cursor-pointer"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold text-[#14231C] dark:text-[#EAF2ED]">
+                        {dish.n}
+                      </span>
+                      <span className="shrink-0 rounded bg-[#ECF8F1] px-1.5 py-0.5 text-[10px] font-semibold text-[#0B7B54] dark:bg-[#18382A] dark:text-[#34D399]">
+                        {dish.items.length} élém.
+                      </span>
+                    </div>
+                    <span className="mt-0.5 block text-xs tabular-nums text-[#5B6E64] dark:text-[#98ABA0]">
+                      {dish.totalG > 0
+                        ? `${formatDecimalFr(dish.totalG)} g · `
+                        : ''}
+                      Prot. {formatDecimalFr(dish.totalP)} · Glu.{' '}
+                      {formatDecimalFr(dish.totalC)} · Lip.{' '}
+                      {formatDecimalFr(dish.totalF)}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-sm font-bold tabular-nums text-[#0D9464] dark:text-[#34D399]">
+                      {dish.totalK} kcal
+                    </span>
+                    <ChevronRight
+                      className="h-4 w-4 text-[#7D9186]"
+                      aria-hidden="true"
+                    />
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Classic Foods Directory */}
       <section className="rounded-2xl border border-[#E2EAE5] bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(16,40,28,0.04)] dark:border-[#25332B] dark:bg-[#16211B] dark:shadow-none">
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="text-base font-bold text-[#14231C] dark:text-[#EAF2ED]">
-            Répertoire ({filtered.length})
+            Aliments classiques ({filtered.length})
           </h2>
           <span className="text-xs text-[#5B6E64] dark:text-[#98ABA0]">
             Valeurs pour 100 g / 100 ml

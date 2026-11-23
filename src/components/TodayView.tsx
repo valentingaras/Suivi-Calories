@@ -11,7 +11,14 @@ import {
   Sunrise,
   Utensils,
 } from 'lucide-react';
-import type { Food, Goals, LogEntry, MealId, MealsOn } from '../types/nutrition';
+import type {
+  Food,
+  Goals,
+  LogEntry,
+  MealId,
+  MealsOn,
+  TempMeal,
+} from '../types/nutrition';
 import {
   dayTotals,
   dosesForDay,
@@ -35,13 +42,17 @@ interface TodayViewProps {
   allLog: Record<string, LogEntry[]>;
   goals: Goals;
   foods: Food[];
+  tempMeals: TempMeal[];
   mealsOn: MealsOn;
   activeMeal: MealId;
   onSelectMeal: (meal: MealId) => void;
   selectedFoodId: string;
+  selectedTempMealId: string;
+  activeInputKind: 'food' | 'temp';
   onOpenFoodPicker: () => void;
   onOpenNewFood: () => void;
   onAddEntry: (food: Food, grams: number, meal: MealId) => void;
+  onAddTempMealPortion: (dish: TempMeal, percent: number, meal: MealId) => void;
   onOpenEntry: (entry: LogEntry) => void;
 }
 
@@ -53,6 +64,7 @@ const MEAL_ICONS: Record<MealId, typeof Sunrise> = {
 };
 
 const QUICK_GRAMS = [50, 100, 150, 200];
+const QUICK_PERCENTS = [20, 25, 33, 50, 100];
 
 export function TodayView({
   currentDate,
@@ -61,18 +73,25 @@ export function TodayView({
   allLog,
   goals,
   foods,
+  tempMeals,
   mealsOn,
   activeMeal,
   onSelectMeal,
   selectedFoodId,
+  selectedTempMealId,
+  activeInputKind,
   onOpenFoodPicker,
   onOpenNewFood,
   onAddEntry,
+  onAddTempMealPortion,
   onOpenEntry,
 }: TodayViewProps) {
   const [gramsInput, setGramsInput] = useState('');
+  const [pctInput, setPctInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [tempErrorMsg, setTempErrorMsg] = useState('');
   const gramsInputRef = useRef<HTMLInputElement>(null);
+  const pctInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const openDatePicker = () => {
@@ -119,6 +138,14 @@ export function TodayView({
     [foods, selectedFoodId]
   );
 
+  const selectedTempMeal = useMemo(
+    () =>
+      tempMeals.find((m) => m.id === selectedTempMealId) ??
+      tempMeals[0] ??
+      null,
+    [tempMeals, selectedTempMealId]
+  );
+
   const parsedGrams = parseNum(gramsInput);
   const livePreview = useMemo(() => {
     if (!selectedFood || !(parsedGrams > 0)) return null;
@@ -130,6 +157,19 @@ export function TodayView({
       f: round1(selectedFood.f * ratio),
     };
   }, [selectedFood, parsedGrams]);
+
+  const parsedPct = parseNum(pctInput);
+  const tempLivePreview = useMemo(() => {
+    if (!selectedTempMeal || !(parsedPct > 0)) return null;
+    const ratio = parsedPct / 100;
+    return {
+      g: round1(selectedTempMeal.totalG * ratio),
+      k: Math.round(selectedTempMeal.totalK * ratio),
+      p: round1(selectedTempMeal.totalP * ratio),
+      c: round1(selectedTempMeal.totalC * ratio),
+      f: round1(selectedTempMeal.totalF * ratio),
+    };
+  }, [selectedTempMeal, parsedPct]);
 
   const mealEntries = useMemo(
     () => entries.filter((x) => mealOf(x) === effectiveMeal),
@@ -166,6 +206,29 @@ export function TodayView({
     if (e.key === 'Enter') {
       e.preventDefault();
       handleSubmit();
+    }
+  };
+
+  const handleTempSubmit = () => {
+    if (!selectedTempMeal) {
+      setTempErrorMsg('Crée d’abord un plat temporaire ci-dessus.');
+      return;
+    }
+    const pct = parseNum(pctInput);
+    if (!(pct > 0) || pct > 100) {
+      setTempErrorMsg('Entre un pourcentage entre 1 et 100 (ex : 25).');
+      pctInputRef.current?.focus();
+      return;
+    }
+    setTempErrorMsg('');
+    onAddTempMealPortion(selectedTempMeal, pct, effectiveMeal);
+    setPctInput('');
+  };
+
+  const handlePctKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTempSubmit();
     }
   };
 
@@ -400,110 +463,218 @@ export function TodayView({
               </button>
             </div>
 
-            <div className="grid grid-cols-[1fr_98px] gap-2.5 sm:grid-cols-12 sm:gap-3">
-              <div className="sm:col-span-8">
-                <label
-                  htmlFor="food-picker-trigger"
-                  className="mb-1 block text-xs font-medium text-[#52655B] dark:text-[#98ABA0]"
-                >
-                  Aliment
-                </label>
+            {/* Input Section: classic food (g) or temporary dish (%) */}
+            {activeInputKind === 'temp' && selectedTempMeal ? (
+              <>
+                <div className="grid grid-cols-[1fr_96px] gap-2.5 sm:grid-cols-12 sm:gap-3 min-w-0">
+                  <div className="min-w-0 sm:col-span-8">
+                    <div className="mb-1 flex items-center justify-between text-xs font-medium text-[#52655B] dark:text-[#98ABA0]">
+                      <label htmlFor="food-picker-trigger">Plat temporaire</label>
+                      <span className="tabular-nums font-semibold text-[#0D9464] dark:text-[#34D399]">
+                        {selectedTempMeal.totalK} kcal (100 %)
+                      </span>
+                    </div>
+                    <button
+                      id="food-picker-trigger"
+                      type="button"
+                      onClick={onOpenFoodPicker}
+                      aria-haspopup="dialog"
+                      className="flex min-h-[44px] w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-[#D4DFD8] bg-[#FAFDFB] px-3 py-2 text-left text-sm transition-colors hover:border-[#0D9464] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D9464] dark:border-[#2C3C32] dark:bg-[#111A15] dark:hover:border-[#34D399] cursor-pointer"
+                    >
+                      <span className="truncate font-medium text-[#14231C] dark:text-[#EAF2ED]">
+                        {selectedTempMeal.n}
+                      </span>
+                      <ChevronDown
+                        className="h-4 w-4 shrink-0 text-[#687A70] dark:text-[#98ABA0]"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </div>
+
+                  <div className="min-w-0 sm:col-span-4">
+                    <label
+                      htmlFor="temp-pct-input"
+                      className="mb-1 block text-xs font-medium text-[#52655B] dark:text-[#98ABA0]"
+                    >
+                      Part (%)
+                    </label>
+                    <input
+                      id="temp-pct-input"
+                      ref={pctInputRef}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="25"
+                      value={pctInput}
+                      onChange={(e) => setPctInput(e.target.value)}
+                      onKeyDown={handlePctKeyDown}
+                      className="min-h-[44px] w-full rounded-xl border border-[#D4DFD8] bg-[#FAFDFB] px-3 py-2 text-sm font-medium tabular-nums text-[#14231C] placeholder:text-[#8A9B91] focus:border-[#0D9464] focus:bg-white focus:outline-none dark:border-[#2C3C32] dark:bg-[#111A15] dark:text-[#EAF2ED] dark:placeholder:text-[#6B7E73] dark:focus:border-[#34D399]"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick % Buttons + Live Preview */}
+                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {QUICK_PERCENTS.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => {
+                          setPctInput(String(q));
+                          setTempErrorMsg('');
+                        }}
+                        className={`min-h-[30px] rounded-lg border px-2.5 py-0.5 text-xs font-semibold tabular-nums transition-colors cursor-pointer ${
+                          pctInput === String(q)
+                            ? 'border-[#0D9464] bg-[#ECF8F1] text-[#0B7B54] dark:border-[#34D399] dark:bg-[#18382A] dark:text-[#34D399]'
+                            : 'border-[#DCE5DF] bg-[#F7FAF8] text-[#4C5F54] hover:bg-[#EDF3EF] dark:border-[#27362D] dark:bg-[#1B2821] dark:text-[#A9BCB0] dark:hover:bg-[#223229]'
+                        }`}
+                      >
+                        {q} %
+                      </button>
+                    ))}
+                  </div>
+
+                  {tempLivePreview && (
+                    <p className="text-xs font-medium tabular-nums text-[#52655B] dark:text-[#98ABA0]">
+                      <strong className="text-[#14231C] dark:text-[#EAF2ED]">
+                        {tempLivePreview.k} kcal
+                      </strong>
+                      {tempLivePreview.g > 0
+                        ? ` (~${formatDecimalFr(tempLivePreview.g)} g)`
+                        : ''}{' '}
+                      · P {formatDecimalFr(tempLivePreview.p)} · G{' '}
+                      {formatDecimalFr(tempLivePreview.c)} · L{' '}
+                      {formatDecimalFr(tempLivePreview.f)}
+                    </p>
+                  )}
+                </div>
+
                 <button
-                  id="food-picker-trigger"
                   type="button"
-                  onClick={onOpenFoodPicker}
-                  aria-haspopup="dialog"
-                  className="flex min-h-[44px] w-full items-center justify-between gap-1.5 rounded-xl border border-[#D4DFD8] bg-[#FAFDFB] px-3 py-2 text-left text-sm transition-colors hover:border-[#0D9464] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D9464] dark:border-[#2C3C32] dark:bg-[#111A15] dark:hover:border-[#34D399] cursor-pointer"
+                  onClick={handleTempSubmit}
+                  className="mt-3.5 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#0D9464] px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#0A7A52] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D9464] dark:bg-[#10B981] dark:text-[#072216] dark:hover:bg-[#34D399] cursor-pointer"
                 >
-                  <span
-                    className={`truncate ${
-                      selectedFood
-                        ? 'font-medium text-[#14231C] dark:text-[#EAF2ED]'
-                        : 'text-[#75887D] dark:text-[#7D9186]'
-                    }`}
-                  >
-                    {selectedFood
-                      ? `${selectedFood.n} (${selectedFood.k} kcal)`
-                      : 'Choisir…'}
-                  </span>
-                  <ChevronDown
-                    className="h-4 w-4 shrink-0 text-[#687A70] dark:text-[#98ABA0]"
-                    aria-hidden="true"
-                  />
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Ajouter au repas
                 </button>
-              </div>
 
-              <div className="sm:col-span-4">
-                <label
-                  htmlFor="grams-input"
-                  className="mb-1 block text-xs font-medium text-[#52655B] dark:text-[#98ABA0]"
-                >
-                  Grammes
-                </label>
-                <input
-                  id="grams-input"
-                  ref={gramsInputRef}
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="100"
-                  value={gramsInput}
-                  onChange={(e) => setGramsInput(e.target.value)}
-                  onKeyDown={handleGramsKeyDown}
-                  className="min-h-[44px] w-full rounded-xl border border-[#D4DFD8] bg-[#FAFDFB] px-3 py-2 text-sm font-medium tabular-nums text-[#14231C] placeholder:text-[#8A9B91] focus:border-[#0D9464] focus:bg-white focus:outline-none dark:border-[#2C3C32] dark:bg-[#111A15] dark:text-[#EAF2ED] dark:placeholder:text-[#6B7E73] dark:focus:border-[#34D399]"
-                />
-              </div>
-            </div>
-
-            {/* Quick Portion Buttons + Live Preview */}
-            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {QUICK_GRAMS.map((q) => (
-                  <button
-                    key={q}
-                    type="button"
-                    onClick={() => {
-                      setGramsInput(String(q));
-                      setErrorMsg('');
-                    }}
-                    className={`min-h-[30px] rounded-lg border px-2.5 py-0.5 text-xs font-semibold tabular-nums transition-colors cursor-pointer ${
-                      gramsInput === String(q)
-                        ? 'border-[#0D9464] bg-[#ECF8F1] text-[#0B7B54] dark:border-[#34D399] dark:bg-[#18382A] dark:text-[#34D399]'
-                        : 'border-[#DCE5DF] bg-[#F7FAF8] text-[#4C5F54] hover:bg-[#EDF3EF] dark:border-[#27362D] dark:bg-[#1B2821] dark:text-[#A9BCB0] dark:hover:bg-[#223229]'
-                    }`}
+                {tempErrorMsg && (
+                  <p
+                    role="alert"
+                    className="mt-2 text-xs font-medium text-[#C63B31] dark:text-[#FCA5A5]"
                   >
-                    {q} g
-                  </button>
-                ))}
-              </div>
+                    {tempErrorMsg}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-[1fr_96px] gap-2.5 sm:grid-cols-12 sm:gap-3 min-w-0">
+                  <div className="min-w-0 sm:col-span-8">
+                    <div className="mb-1 flex items-center justify-between text-xs font-medium text-[#52655B] dark:text-[#98ABA0]">
+                      <label htmlFor="food-picker-trigger">Aliment</label>
+                      {selectedFood && (
+                        <span className="tabular-nums font-semibold text-[#0D9464] dark:text-[#34D399]">
+                          {selectedFood.k} kcal / 100g
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      id="food-picker-trigger"
+                      type="button"
+                      onClick={onOpenFoodPicker}
+                      aria-haspopup="dialog"
+                      className="flex min-h-[44px] w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-[#D4DFD8] bg-[#FAFDFB] px-3 py-2 text-left text-sm transition-colors hover:border-[#0D9464] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D9464] dark:border-[#2C3C32] dark:bg-[#111A15] dark:hover:border-[#34D399] cursor-pointer"
+                    >
+                      <span
+                        className={`truncate ${
+                          selectedFood
+                            ? 'font-medium text-[#14231C] dark:text-[#EAF2ED]'
+                            : 'text-[#75887D] dark:text-[#7D9186]'
+                        }`}
+                      >
+                        {selectedFood ? selectedFood.n : 'Choisir…'}
+                      </span>
+                      <ChevronDown
+                        className="h-4 w-4 shrink-0 text-[#687A70] dark:text-[#98ABA0]"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </div>
 
-              {livePreview && (
-                <p className="text-xs font-medium tabular-nums text-[#52655B] dark:text-[#98ABA0]">
-                  <strong className="text-[#14231C] dark:text-[#EAF2ED]">
-                    {livePreview.k} kcal
-                  </strong>{' '}
-                  · P {formatDecimalFr(livePreview.p)} · G{' '}
-                  {formatDecimalFr(livePreview.c)} · L{' '}
-                  {formatDecimalFr(livePreview.f)}
-                </p>
-              )}
-            </div>
+                  <div className="min-w-0 sm:col-span-4">
+                    <label
+                      htmlFor="grams-input"
+                      className="mb-1 block text-xs font-medium text-[#52655B] dark:text-[#98ABA0]"
+                    >
+                      Grammes
+                    </label>
+                    <input
+                      id="grams-input"
+                      ref={gramsInputRef}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="100"
+                      value={gramsInput}
+                      onChange={(e) => setGramsInput(e.target.value)}
+                      onKeyDown={handleGramsKeyDown}
+                      className="min-h-[44px] w-full rounded-xl border border-[#D4DFD8] bg-[#FAFDFB] px-3 py-2 text-sm font-medium tabular-nums text-[#14231C] placeholder:text-[#8A9B91] focus:border-[#0D9464] focus:bg-white focus:outline-none dark:border-[#2C3C32] dark:bg-[#111A15] dark:text-[#EAF2ED] dark:placeholder:text-[#6B7E73] dark:focus:border-[#34D399]"
+                    />
+                  </div>
+                </div>
 
-            <button
-              type="button"
-              onClick={handleSubmit}
-              className="mt-3.5 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#0D9464] px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#0A7A52] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D9464] dark:bg-[#10B981] dark:text-[#072216] dark:hover:bg-[#34D399] cursor-pointer"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Ajouter au repas
-            </button>
+                {/* Quick Portion Buttons + Live Preview */}
+                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {QUICK_GRAMS.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => {
+                          setGramsInput(String(q));
+                          setErrorMsg('');
+                        }}
+                        className={`min-h-[30px] rounded-lg border px-2.5 py-0.5 text-xs font-semibold tabular-nums transition-colors cursor-pointer ${
+                          gramsInput === String(q)
+                            ? 'border-[#0D9464] bg-[#ECF8F1] text-[#0B7B54] dark:border-[#34D399] dark:bg-[#18382A] dark:text-[#34D399]'
+                            : 'border-[#DCE5DF] bg-[#F7FAF8] text-[#4C5F54] hover:bg-[#EDF3EF] dark:border-[#27362D] dark:bg-[#1B2821] dark:text-[#A9BCB0] dark:hover:bg-[#223229]'
+                        }`}
+                      >
+                        {q} g
+                      </button>
+                    ))}
+                  </div>
 
-            {errorMsg && (
-              <p
-                role="alert"
-                className="mt-2 text-xs font-medium text-[#C63B31] dark:text-[#FCA5A5]"
-              >
-                {errorMsg}
-              </p>
+                  {livePreview && (
+                    <p className="text-xs font-medium tabular-nums text-[#52655B] dark:text-[#98ABA0]">
+                      <strong className="text-[#14231C] dark:text-[#EAF2ED]">
+                        {livePreview.k} kcal
+                      </strong>{' '}
+                      · P {formatDecimalFr(livePreview.p)} · G{' '}
+                      {formatDecimalFr(livePreview.c)} · L{' '}
+                      {formatDecimalFr(livePreview.f)}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="mt-3.5 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#0D9464] px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#0A7A52] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D9464] dark:bg-[#10B981] dark:text-[#072216] dark:hover:bg-[#34D399] cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Ajouter au repas
+                </button>
+
+                {errorMsg && (
+                  <p
+                    role="alert"
+                    className="mt-2 text-xs font-medium text-[#C63B31] dark:text-[#FCA5A5]"
+                  >
+                    {errorMsg}
+                  </p>
+                )}
+              </>
             )}
           </section>
 
@@ -539,8 +710,13 @@ export function TodayView({
                           {x.n}
                         </span>
                         <span className="mt-0.5 block text-xs tabular-nums text-[#5B6E64] dark:text-[#98ABA0]">
-                          {formatDecimalFr(x.g)} g · Prot. {formatDecimalFr(x.p)} ·
-                          Glu. {formatDecimalFr(x.c)} · Lip. {formatDecimalFr(x.f)}
+                          {x.pct && x.pct > 0
+                            ? `${formatDecimalFr(x.pct)} % du plat${
+                                x.g > 0 ? ` (${formatDecimalFr(x.g)} g)` : ''
+                              }`
+                            : `${formatDecimalFr(x.g)} g`}{' '}
+                          · Prot. {formatDecimalFr(x.p)} · Glu.{' '}
+                          {formatDecimalFr(x.c)} · Lip. {formatDecimalFr(x.f)}
                           {x.al
                             ? ` · Alc ${formatDecimalFr(x.al / 10)} d (${Math.round(
                                 x.al * 7
