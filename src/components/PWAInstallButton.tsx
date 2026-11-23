@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Download, Share, Smartphone, WifiOff, X } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export function PWAInstallButton() {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
@@ -47,6 +48,8 @@ export function PWAInstallButton() {
 }
 
 function IOSInstallModal({ onClose }: { onClose: () => void }) {
+  useModalBackHandler(true, onClose);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs"

@@ -24,6 +24,7 @@ import {
   searchOpenFoodFacts,
 } from '../utils/openFoodFacts';
 import { TempMealBuilder } from './TempMealModal';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 /* 1. Searchable Food Picker Modal */
 interface FoodPickerModalProps {
@@ -46,6 +47,8 @@ export function FoodPickerModal({
   const [query, setQuery] = useState('');
   const [highlightIdx, setHighlightIdx] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useModalBackHandler(open, onClose);
 
   useEffect(() => {
     if (open) {
@@ -277,6 +280,8 @@ export function FoodFormModal({
   const nameRef = useRef<HTMLInputElement>(null);
   const offRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  useModalBackHandler(open, onClose);
 
   useEffect(() => {
     if (open) {
@@ -725,6 +730,8 @@ export function FoodActionModal({
   onEdit,
   onDelete,
 }: FoodActionModalProps) {
+  useModalBackHandler(Boolean(food), onClose);
+
   if (!food) return null;
 
   return (
@@ -803,6 +810,8 @@ export function TempMealActionModal({
   onEdit,
   onDelete,
 }: TempMealActionModalProps) {
+  useModalBackHandler(Boolean(dish), onClose);
+
   if (!dish) return null;
 
   return (
@@ -897,6 +906,8 @@ export function EntryEditModal({
   const [meal, setMeal] = useState<MealId>('o');
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useModalBackHandler(Boolean(entry), onClose);
 
   const matchedFood = useMemo(() => {
     if (!entry) return null;
@@ -1216,6 +1227,8 @@ export function DayDetailModal({
   onClose,
   onJumpToDay,
 }: DayDetailModalProps) {
+  useModalBackHandler(Boolean(dateKeyStr), onClose);
+
   if (!dateKeyStr) return null;
 
   const totals = dayTotals(entries);
