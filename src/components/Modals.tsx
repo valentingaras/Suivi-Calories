@@ -1,6 +1,12 @@
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Globe, Loader2, Pencil, Search, Trash2, X } from 'lucide-react';
-import type { Food, LogEntry, MealId, TempMeal } from '../types/nutrition';
+import type {
+  DrinkCategory,
+  Food,
+  LogEntry,
+  MealId,
+  TempMeal,
+} from '../types/nutrition';
 import {
   MEALS,
   capitalizeFoodName,
@@ -14,6 +20,7 @@ import {
 } from '../utils/nutrition';
 import {
   type OpenFoodFactsProduct,
+  searchCiqualFoods,
   searchOpenFoodFacts,
 } from '../utils/openFoodFacts';
 import { TempMealBuilder } from './TempMealModal';
@@ -196,8 +203,13 @@ export function FoodPickerModal({
                         <span className="block truncate text-sm font-semibold text-[#14231C] dark:text-[#EAF2ED]">
                           {f.n}
                         </span>
-                        <span className="block text-xs tabular-nums text-[#5B6E64] dark:text-[#98ABA0]">
+                        <span className="block text-[11px] sm:text-xs tabular-nums text-[#5B6E64] dark:text-[#98ABA0]">
                           Prot. {f.p} · Glu. {f.c} · Lip. {f.f}
+                          {f.b
+                            ? ' · en cL'
+                            : f.u
+                              ? ` · 1 u = ${formatDecimalFr(f.u)} g`
+                              : ''}
                         </span>
                       </div>
                       <span className="shrink-0 text-sm font-bold tabular-nums text-[#0D9464] dark:text-[#34D399]">
@@ -251,6 +263,8 @@ export function FoodFormModal({
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
   const [alc, setAlc] = useState('');
+  const [unitGrams, setUnitGrams] = useState('');
+  const [drinkCat, setDrinkCat] = useState<DrinkCategory | ''>('');
   const [error, setError] = useState('');
 
   // Open Food Facts search state
@@ -278,6 +292,8 @@ export function FoodFormModal({
       setCarbs(editingFood && editingFood.c ? String(editingFood.c) : '');
       setFat(editingFood && editingFood.f ? String(editingFood.f) : '');
       setAlc(editingFood && editingFood.a ? String(editingFood.a) : '');
+      setUnitGrams(editingFood && editingFood.u ? String(editingFood.u) : '');
+      setDrinkCat(editingFood?.b ?? '');
       setError('');
       setOffQuery(editingFood?.n ?? '');
       setOffLoading(false);
@@ -308,10 +324,23 @@ export function FoodFormModal({
 
   const parseOptional = (v: string) => (v.trim() === '' ? 0 : parseNum(v));
 
+  const handleLiveCiqualSearch = async (rawValue: string) => {
+    setOffQuery(rawValue);
+    setOffError('');
+    setOffInfo('');
+    const trimmed = rawValue.trim();
+    if (trimmed.length < 2 || /^\d+$/.test(trimmed)) {
+      setOffResults([]);
+      return;
+    }
+    const matches = await searchCiqualFoods(trimmed);
+    setOffResults(matches);
+  };
+
   const handleSearchOff = async () => {
     const q = offQuery.trim();
     if (!q) {
-      setOffError('Entre un nom de produit ou un code-barres.');
+      setOffError('Entre un nom d’aliment ou un code-barres.');
       return;
     }
     abortRef.current?.abort();
@@ -324,7 +353,7 @@ export function FoodFormModal({
       const results = await searchOpenFoodFacts(q, ctrl.signal);
       setOffResults(results);
       if (results.length === 0) {
-        setOffError('Aucun produit trouvé sur Open Food Facts.');
+        setOffError('Aucun aliment trouvé dans Ciqual ni sur Open Food Facts.');
       }
     } catch (err) {
       if (err instanceof Error) {
@@ -339,8 +368,11 @@ export function FoodFormModal({
   };
 
   const handleApplyOffProduct = (item: OpenFoodFactsProduct) => {
+    const isCiqual = item.source === 'ciqual';
     const displayName =
-      item.brand && !normText(item.name).includes(normText(item.brand))
+      !isCiqual &&
+      item.brand &&
+      !normText(item.name).includes(normText(item.brand))
         ? `${item.name} (${item.brand})`
         : item.name;
     setName(capitalizeFoodName(displayName));
@@ -352,7 +384,11 @@ export function FoodFormModal({
     setError('');
     setOffResults([]);
     setOffError('');
-    setOffInfo('Valeurs importées depuis Open Food Facts — vérifie et enregistre.');
+    setOffInfo(
+      isCiqual
+        ? 'Valeurs importées depuis la table Ciqual (ANSES) — vérifie et enregistre.'
+        : 'Valeurs importées depuis Open Food Facts — vérifie et enregistre.'
+    );
   };
 
   const handleSave = () => {
@@ -362,12 +398,24 @@ export function FoodFormModal({
     const c = parseOptional(carbs);
     const f = parseOptional(fat);
     const a = parseOptional(alc);
+    const u = drinkCat ? 0 : parseOptional(unitGrams);
 
-    if (!n || [k, p, c, f, a].some(Number.isNaN)) {
+    if (!n || [k, p, c, f, a, u].some(Number.isNaN)) {
       setError('Renseigne au moins le nom et les kcal pour 100 g.');
       return;
     }
-    onSave({ n, k, p, c, f, a }, editingFood?.id);
+    onSave(
+      {
+        n,
+        k,
+        p,
+        c,
+        f,
+        a,
+        ...(drinkCat ? { b: drinkCat } : u > 0 ? { u: round1(u) } : {}),
+      },
+      editingFood?.id
+    );
   };
 
   return (
@@ -450,7 +498,7 @@ export function FoodFormModal({
               </p>
             )}
 
-            {/* Open Food Facts Lookup */}
+            {/* Ciqual ANSES + Barcode Lookup */}
             <div className="mt-3.5 rounded-xl border border-[#DCE5DF] bg-[#F7FAF8] p-3 dark:border-[#25332B] dark:bg-[#121B16]">
           <label
             htmlFor="off-search-input"
@@ -460,7 +508,7 @@ export function FoodFormModal({
               className="h-3.5 w-3.5 text-[#0D9464] dark:text-[#34D399]"
               aria-hidden="true"
             />
-            Rechercher sur Open Food Facts
+            Base Ciqual (ANSES) &amp; code-barres
           </label>
           <div className="flex gap-1.5">
             <input
@@ -468,14 +516,14 @@ export function FoodFormModal({
               ref={offRef}
               type="text"
               value={offQuery}
-              onChange={(e) => setOffQuery(e.target.value)}
+              onChange={(e) => void handleLiveCiqualSearch(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   void handleSearchOff();
                 }
               }}
-              placeholder="Nom ou code-barres…"
+              placeholder="Ex : morue, yaourt grec, ou code-barres…"
               className="min-h-[38px] flex-1 rounded-lg border border-[#D4DFD8] bg-white px-2.5 text-xs text-[#14231C] placeholder:text-[#7D9186] focus:border-[#0D9464] focus:outline-none dark:border-[#2C3C32] dark:bg-[#16211B] dark:text-[#EAF2ED] dark:focus:border-[#34D399]"
             />
             <button
@@ -585,6 +633,53 @@ export function FoodFormModal({
               </div>
             ))}
           </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="fb-select"
+                className="mb-1 block text-xs font-medium text-[#52655B] dark:text-[#98ABA0]"
+              >
+                Boisson (saisie en cL)
+              </label>
+              <select
+                id="fb-select"
+                value={drinkCat}
+                onChange={(e) => setDrinkCat(e.target.value as DrinkCategory | '')}
+                className="min-h-[42px] w-full rounded-xl border border-[#D4DFD8] bg-[#FAFDFB] px-3 text-sm text-[#14231C] focus:border-[#0D9464] focus:bg-white focus:outline-none dark:border-[#2C3C32] dark:bg-[#111A15] dark:text-[#EAF2ED] dark:focus:border-[#34D399]"
+              >
+                <option value="">Non (aliment solide)</option>
+                <option value="beer">Bière / Cidre (0,25 L – 1 L)</option>
+                <option value="wine">Vin / Champagne (12 – 50 cL)</option>
+                <option value="soda">Soda / Jus (25 – 33 cL)</option>
+                <option value="spirit">Spiritueux / Sirop (2 – 10 cL)</option>
+                <option value="other">Autre boisson (lait, café, thé…)</option>
+              </select>
+            </div>
+
+            {!drinkCat && (
+              <div>
+                <label
+                  htmlFor="fu-input"
+                  className="mb-1 block text-xs font-medium text-[#52655B] dark:text-[#98ABA0]"
+                >
+                  Poids d’une unité (g) — facultatif
+                </label>
+                <input
+                  id="fu-input"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Ex : 60 (œuf), 35 (sushi)…"
+                  value={unitGrams}
+                  onChange={(e) => setUnitGrams(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSave();
+                  }}
+                  className="min-h-[42px] w-full rounded-xl border border-[#D4DFD8] bg-[#FAFDFB] px-3.5 text-sm tabular-nums text-[#14231C] placeholder:text-[#8A9B91] focus:border-[#0D9464] focus:bg-white focus:outline-none dark:border-[#2C3C32] dark:bg-[#111A15] dark:text-[#EAF2ED] dark:placeholder:text-[#6B7E73] dark:focus:border-[#34D399]"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -650,9 +745,16 @@ export function FoodActionModal({
           {food.n}
         </h3>
         <p className="mt-1 text-xs tabular-nums text-[#5B6E64] dark:text-[#98ABA0]">
-          {food.k} kcal pour 100 g · Prot. {food.p} · Glu. {food.c} · Lip.{' '}
-          {food.f}
+          {food.k} kcal pour {food.b ? '100 ml (10 cL)' : '100 g'} · Prot.{' '}
+          {food.p} · Glu. {food.c} · Lip. {food.f}
           {food.a ? ` · Alc ${food.a}` : ''}
+          {food.b
+            ? ' · Saisie en cL'
+            : food.u
+              ? ` · 1 unité ≈ ${formatDecimalFr(food.u)} g (${Math.round(
+                  (food.k * food.u) / 100
+                )} kcal)`
+              : ''}
         </p>
 
         <div className="mt-5 grid gap-2">
@@ -770,28 +872,71 @@ export function TempMealActionModal({
 /* 4. Entry Edit / Remove Modal */
 interface EntryEditModalProps {
   entry: LogEntry | null;
+  foods?: Food[];
   onClose: () => void;
-  onUpdate: (entryId: string, newGrams: number, newMeal: MealId) => void;
+  onUpdate: (
+    entryId: string,
+    newAmount: number,
+    newMeal: MealId,
+    options?: { units?: number; cl?: number }
+  ) => void;
   onEditFood: (entry: LogEntry, currentGrams: number, currentMeal: MealId) => void;
   onDelete: (entryId: string) => void;
 }
 
 export function EntryEditModal({
   entry,
+  foods = [],
   onClose,
   onUpdate,
   onEditFood,
   onDelete,
 }: EntryEditModalProps) {
   const [gramsStr, setGramsStr] = useState('');
+  const [editMode, setEditMode] = useState<'g' | 'unit'>('g');
   const [meal, setMeal] = useState<MealId>('o');
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const matchedFood = useMemo(() => {
+    if (!entry) return null;
+    return (
+      (entry.foodId && foods.find((f) => f.id === entry.foodId)) ||
+      foods.find((f) => normText(f.n) === normText(entry.n)) ||
+      null
+    );
+  }, [entry, foods]);
+
+  const unitWeight = useMemo(() => {
+    if (!entry || (entry.cl && entry.cl > 0)) return 0;
+    if (entry.u && entry.u > 0 && entry.g > 0) {
+      return round1(entry.g / entry.u);
+    }
+    if (matchedFood?.u && matchedFood.u > 0) {
+      return matchedFood.u;
+    }
+    return 0;
+  }, [entry, matchedFood]);
+
   useEffect(() => {
     if (entry) {
       const isPct = Boolean(entry.pct && entry.pct > 0);
-      setGramsStr(String(round1(isPct ? entry.pct! : entry.g)));
+      const isCl = Boolean(!isPct && entry.cl && entry.cl > 0);
+      const hasUnits = Boolean(!isPct && !isCl && entry.u && entry.u > 0);
+      setEditMode(hasUnits ? 'unit' : 'g');
+      setGramsStr(
+        String(
+          round1(
+            isPct
+              ? entry.pct!
+              : isCl
+                ? entry.cl!
+                : hasUnits
+                  ? entry.u!
+                  : entry.g
+          )
+        )
+      );
       setMeal(mealOf(entry));
       setError('');
       setTimeout(() => {
@@ -804,16 +949,52 @@ export function EntryEditModal({
   if (!entry) return null;
 
   const isPctEntry = Boolean(entry.pct && entry.pct > 0);
-  const baseAmount = isPctEntry ? entry.pct! : entry.g;
+  const isClEntry = Boolean(!isPctEntry && entry.cl && entry.cl > 0);
+  const effectiveMode: 'g' | 'unit' | 'cl' = isClEntry
+    ? 'cl'
+    : !isPctEntry && editMode === 'unit' && unitWeight > 0
+      ? 'unit'
+      : 'g';
+
   const parsed = parseNum(gramsStr);
-  const ratio = parsed > 0 && baseAmount > 0 ? parsed / baseAmount : 0;
+  const candidateGrams =
+    effectiveMode === 'cl' && parsed > 0
+      ? round1(parsed * 10)
+      : effectiveMode === 'unit' && parsed > 0
+        ? round1(parsed * unitWeight)
+        : parsed;
+  const baseAmount = isPctEntry ? entry.pct! : entry.g;
+  const ratio = isPctEntry
+    ? parsed > 0 && baseAmount > 0
+      ? parsed / baseAmount
+      : 0
+    : candidateGrams > 0 && entry.g > 0
+      ? candidateGrams / entry.g
+      : 0;
+
+  const handleToggleMode = (nextMode: 'g' | 'unit') => {
+    if (nextMode === effectiveMode || !(unitWeight > 0)) return;
+    if (parsed > 0) {
+      const converted =
+        nextMode === 'unit'
+          ? round1(parsed / unitWeight)
+          : round1(parsed * unitWeight);
+      setGramsStr(String(converted));
+    }
+    setEditMode(nextMode);
+    setError('');
+  };
 
   const handleValidate = () => {
     if (!(parsed > 0)) {
       setError(
         isPctEntry
           ? 'Entre une part en pourcentage (ex : 25).'
-          : 'Entre une quantité en grammes (ex : 100).'
+          : effectiveMode === 'cl'
+            ? 'Entre un volume en cL (ex : 25).'
+            : effectiveMode === 'unit'
+              ? 'Entre un nombre d’unités (ex : 2).'
+              : 'Entre une quantité en grammes (ex : 100).'
       );
       return;
     }
@@ -821,7 +1002,17 @@ export function EntryEditModal({
       setError('Le pourcentage doit être compris entre 1 et 100.');
       return;
     }
-    onUpdate(entry.id, parsed, meal);
+    if (isPctEntry) {
+      onUpdate(entry.id, parsed, meal);
+    } else if (effectiveMode === 'cl') {
+      onUpdate(entry.id, round1(parsed * 10), meal, { cl: round1(parsed) });
+    } else if (effectiveMode === 'unit' && unitWeight > 0) {
+      onUpdate(entry.id, round1(parsed * unitWeight), meal, {
+        units: round1(parsed),
+      });
+    } else {
+      onUpdate(entry.id, round1(parsed), meal, { units: 0 });
+    }
   };
 
   return (
@@ -848,13 +1039,29 @@ export function EntryEditModal({
                 ? `${formatDecimalFr(parsed > 0 ? parsed : entry.pct!)} % du plat · ${Math.round(
                     entry.k * (ratio > 0 ? ratio : 1)
                   )} kcal`
-                : ratio > 0
-                  ? `${formatDecimalFr(parsed)} g · ${Math.round(
-                      entry.k * ratio
+                : effectiveMode === 'cl'
+                  ? `${formatDecimalFr(parsed > 0 ? parsed : entry.cl!)} cL · ${Math.round(
+                      entry.k * (ratio > 0 ? ratio : 1)
                     )} kcal`
-                  : `${formatDecimalFr(entry.g)} g · ${Math.round(
-                      entry.k
-                    )} kcal`}
+                  : effectiveMode === 'unit' && unitWeight > 0
+                    ? `${formatDecimalFr(
+                        parsed > 0 ? parsed : entry.u || entry.g / unitWeight
+                      )} ${
+                        (parsed > 0 ? parsed : entry.u || entry.g / unitWeight) < 2
+                          ? 'unité'
+                          : 'unités'
+                      } (${formatDecimalFr(
+                        candidateGrams > 0 ? candidateGrams : entry.g
+                      )} g) · ${Math.round(
+                        entry.k * (ratio > 0 ? ratio : 1)
+                      )} kcal`
+                    : ratio > 0
+                      ? `${formatDecimalFr(parsed)} g · ${Math.round(
+                          entry.k * ratio
+                        )} kcal`
+                      : `${formatDecimalFr(entry.g)} g · ${Math.round(
+                          entry.k
+                        )} kcal`}
             </p>
           </div>
           <button
@@ -868,12 +1075,49 @@ export function EntryEditModal({
         </div>
 
         <div className="mt-4 space-y-3">
+          {!isPctEntry && !isClEntry && unitWeight > 0 && (
+            <div
+              role="group"
+              aria-label="Mode d’édition"
+              className="grid grid-cols-2 gap-1 rounded-xl bg-[#ECF2EE] p-1 dark:bg-[#111A15]"
+            >
+              <button
+                type="button"
+                onClick={() => handleToggleMode('unit')}
+                className={`min-h-[34px] rounded-lg px-2 text-xs font-semibold transition-colors cursor-pointer ${
+                  effectiveMode === 'unit'
+                    ? 'bg-white text-[#0B7B54] shadow-xs dark:bg-[#1D2B23] dark:text-[#34D399]'
+                    : 'text-[#55685E] hover:text-[#14231C] dark:text-[#98ABA0]'
+                }`}
+              >
+                Unités ({formatDecimalFr(unitWeight)} g)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleMode('g')}
+                className={`min-h-[34px] rounded-lg px-2 text-xs font-semibold transition-colors cursor-pointer ${
+                  effectiveMode === 'g'
+                    ? 'bg-white text-[#0B7B54] shadow-xs dark:bg-[#1D2B23] dark:text-[#34D399]'
+                    : 'text-[#55685E] hover:text-[#14231C] dark:text-[#98ABA0]'
+                }`}
+              >
+                Grammes
+              </button>
+            </div>
+          )}
+
           <div>
             <label
               htmlFor="edit-entry-grams"
               className="mb-1 block text-xs font-medium text-[#52655B] dark:text-[#98ABA0]"
             >
-              {isPctEntry ? 'Part du plat (%)' : 'Quantité (g)'}
+              {isPctEntry
+                ? 'Part du plat (%)'
+                : effectiveMode === 'cl'
+                  ? 'Volume (cL)'
+                  : effectiveMode === 'unit'
+                    ? 'Quantité (unités)'
+                    : 'Quantité (g)'}
             </label>
             <input
               id="edit-entry-grams"
@@ -929,7 +1173,11 @@ export function EntryEditModal({
             <button
               type="button"
               onClick={() =>
-                onEditFood(entry, parsed > 0 ? parsed : entry.g, meal)
+                onEditFood(
+                  entry,
+                  candidateGrams > 0 ? candidateGrams : entry.g,
+                  meal
+                )
               }
               className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[#DCE5DF] bg-[#F7FAF8] px-4 text-sm font-semibold text-[#14231C] transition-colors hover:bg-[#EDF3EF] dark:border-[#2C3C32] dark:bg-[#1B2821] dark:text-[#EAF2ED] dark:hover:bg-[#223229] cursor-pointer"
             >
@@ -1037,7 +1285,13 @@ export function DayDetailModal({
                             ? `${formatDecimalFr(x.pct)} % du plat${
                                 x.g > 0 ? ` (${formatDecimalFr(x.g)} g)` : ''
                               }`
-                            : `${formatDecimalFr(x.g)} g`}
+                            : x.cl && x.cl > 0
+                              ? `${formatDecimalFr(x.cl)} cL`
+                              : x.u && x.u > 0
+                                ? `${formatDecimalFr(x.u)} ${
+                                    x.u < 2 ? 'unité' : 'unités'
+                                  } (${formatDecimalFr(x.g)} g)`
+                                : `${formatDecimalFr(x.g)} g`}
                         </span>
                       </div>
                       <span className="font-semibold tabular-nums text-[#3C5045] dark:text-[#B9CBC0]">

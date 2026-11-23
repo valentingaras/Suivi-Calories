@@ -91,7 +91,7 @@ export function AlimentsView({
             className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-[#CBE4D6] bg-[#ECF8F1] px-3.5 py-2.5 text-sm font-semibold text-[#0B7B54] transition-colors hover:bg-[#DDF3E6] dark:border-[#214B39] dark:bg-[#153125] dark:text-[#34D399] dark:hover:bg-[#1B3D2E] whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Globe className="h-4 w-4" aria-hidden="true" />
-            En ligne
+            Ciqual
           </button>
 
           <button
@@ -236,6 +236,11 @@ export function AlimentsView({
                     <span className="mt-0.5 block text-xs tabular-nums text-[#5B6E64] dark:text-[#98ABA0]">
                       Prot. {f.p} · Glu. {f.c} · Lip. {f.f}
                       {f.a ? ` · Alc ${f.a}` : ''}
+                      {f.b
+                        ? ' · en cL'
+                        : f.u
+                          ? ` · 1 u = ${formatDecimalFr(f.u)} g`
+                          : ''}
                     </span>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">

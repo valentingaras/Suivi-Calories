@@ -15,7 +15,9 @@ import type {
 import { writeToIndexedDB } from './db';
 
 export const STORAGE_KEY = 'suivi-calories-v1';
-export const CURRENT_DB_VERSION = 6;
+export const CURRENT_DB_VERSION = 8;
+
+const VALID_DRINK_CATEGORIES = new Set(['beer', 'wine', 'soda', 'spirit', 'other']);
 
 export function capitalizeFoodName(name: string): string {
   const trimmed = name.trim();
@@ -33,6 +35,8 @@ function sanitizeFood(f: Food & { note?: unknown }): Food {
     f: f.f,
   };
   if (f.a && f.a > 0) clean.a = f.a;
+  if (f.u && f.u > 0) clean.u = f.u;
+  if (f.b && VALID_DRINK_CATEGORIES.has(f.b)) clean.b = f.b;
   return clean;
 }
 
@@ -69,8 +73,23 @@ export function mergeFoodsWithDefaults(existingFoods: Food[]): Food[] {
   for (const defFood of DEFAULT_FOODS_DB) {
     const cleanDef = sanitizeFood(defFood);
     const key = normText(cleanDef.n);
-    if (!mapByNorm.has(key)) {
+    const existing = mapByNorm.get(key);
+    if (!existing) {
       mapByNorm.set(key, cleanDef);
+    } else {
+      const patched: Food = { ...existing };
+      let changed = false;
+      if (cleanDef.u && !patched.u) {
+        patched.u = cleanDef.u;
+        changed = true;
+      }
+      if (cleanDef.b && !patched.b) {
+        patched.b = cleanDef.b;
+        changed = true;
+      }
+      if (changed) {
+        mapByNorm.set(key, patched);
+      }
     }
   }
 
@@ -217,7 +236,8 @@ export function parseFoodsCsv(csvText: string): Food[] {
     const c = optNum(cols[3]);
     const f = optNum(cols[4]);
     const a = optNum(cols[5]);
-    if ([k, p, c, f, a].some(Number.isNaN)) continue;
+    const u = optNum(cols[6]);
+    if ([k, p, c, f, a, u].some(Number.isNaN)) continue;
 
     const item: Food = {
       id: `imp_${stamp}_${i}`,
@@ -228,6 +248,7 @@ export function parseFoodsCsv(csvText: string): Food[] {
       f,
     };
     if (a > 0) item.a = a;
+    if (u > 0) item.u = u;
     result.push(item);
   }
 

@@ -37,6 +37,7 @@ export function TempMealBuilder({
   const [selectedFoodId, setSelectedFoodId] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [ingGrams, setIngGrams] = useState('');
+  const [ingUnitMode, setIngUnitMode] = useState<'g' | 'unit'>('g');
 
   // Custom / free macros state
   const [customLabel, setCustomLabel] = useState('');
@@ -57,6 +58,7 @@ export function TempMealBuilder({
     setSelectedFoodId('');
     setDropdownOpen(false);
     setIngGrams('');
+    setIngUnitMode('g');
     setCustomLabel('');
     setCustomKcal('');
     setCustomProt('');
@@ -87,23 +89,48 @@ export function TempMealBuilder({
 
   const totals = useMemo(() => computeTempMealTotals(items), [items]);
 
+  const isDrinkIng = Boolean(selectedFood?.b);
+  const effectiveIngUnitMode: 'g' | 'unit' | 'cl' = isDrinkIng
+    ? 'cl'
+    : ingUnitMode === 'unit' && selectedFood?.u && selectedFood.u > 0
+      ? 'unit'
+      : 'g';
+
   const handleAddFoodItem = () => {
     setError('');
     if (!selectedFood) {
       setError('Sélectionne un ingrédient dans la liste.');
       return;
     }
-    const g = parseNum(ingGrams);
-    if (!(g > 0)) {
-      setError('Entre un poids en grammes pour cet ingrédient.');
+    const amt = parseNum(ingGrams);
+    if (!(amt > 0)) {
+      setError(
+        effectiveIngUnitMode === 'cl'
+          ? 'Entre un volume en cL pour cette boisson.'
+          : effectiveIngUnitMode === 'unit'
+            ? 'Entre un nombre d’unités pour cet ingrédient.'
+            : 'Entre un poids en grammes pour cet ingrédient.'
+      );
       return;
     }
+    const g =
+      effectiveIngUnitMode === 'cl'
+        ? round1(amt * 10)
+        : effectiveIngUnitMode === 'unit' && selectedFood.u
+          ? round1(amt * selectedFood.u)
+          : amt;
     const ratio = g / 100;
+    const labelSuffix =
+      effectiveIngUnitMode === 'cl'
+        ? ` (${formatDecimalFr(amt)} cL)`
+        : effectiveIngUnitMode === 'unit'
+          ? ` (${formatDecimalFr(amt)} ${amt < 2 ? 'unité' : 'unités'})`
+          : '';
     const newItem: TempMealItem = {
       id: `tmi_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       kind: 'food',
       foodId: selectedFood.id,
-      n: selectedFood.n,
+      n: `${selectedFood.n}${labelSuffix}`,
       g: round1(g),
       k: Math.round(selectedFood.k * ratio),
       p: round1(selectedFood.p * ratio),
@@ -115,6 +142,7 @@ export function TempMealBuilder({
     setSelectedFoodId('');
     setFoodQuery('');
     setIngGrams('');
+    setIngUnitMode('g');
     setDropdownOpen(false);
   };
 
@@ -298,6 +326,7 @@ export function TempMealBuilder({
                             onClick={() => {
                               setSelectedFoodId(f.id);
                               setFoodQuery(f.n);
+                              setIngUnitMode(f.u && f.u > 0 ? 'unit' : 'g');
                               setDropdownOpen(false);
                               setError('');
                             }}
@@ -305,9 +334,14 @@ export function TempMealBuilder({
                           >
                             <span className="truncate font-semibold text-[#14231C] dark:text-[#EAF2ED]">
                               {f.n}
+                              {f.b
+                                ? ' (en cL)'
+                                : f.u
+                                  ? ` (1 u = ${formatDecimalFr(f.u)} g)`
+                                  : ''}
                             </span>
                             <span className="shrink-0 tabular-nums text-[#0D9464] dark:text-[#34D399]">
-                              {f.k} kcal/100g
+                              {f.k} kcal/{f.b ? '100ml' : '100g'}
                             </span>
                           </button>
                         </li>
@@ -316,6 +350,33 @@ export function TempMealBuilder({
                   </ul>
                 )}
               </div>
+
+              {!selectedFood?.b && selectedFood?.u && selectedFood.u > 0 && (
+                <div className="inline-flex rounded-lg border border-[#DCE5DF] bg-[#E9F0EC] p-0.5 dark:border-[#25332B] dark:bg-[#1C2821]">
+                  <button
+                    type="button"
+                    onClick={() => setIngUnitMode('unit')}
+                    className={`min-h-[28px] rounded-md px-2 text-[11px] font-semibold transition-colors cursor-pointer ${
+                      effectiveIngUnitMode === 'unit'
+                        ? 'bg-white text-[#0B7B54] shadow-xs dark:bg-[#16211B] dark:text-[#34D399]'
+                        : 'text-[#55685E] dark:text-[#98ABA0]'
+                    }`}
+                  >
+                    Unités ({formatDecimalFr(selectedFood.u)} g)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIngUnitMode('g')}
+                    className={`min-h-[28px] rounded-md px-2 text-[11px] font-semibold transition-colors cursor-pointer ${
+                      effectiveIngUnitMode === 'g'
+                        ? 'bg-white text-[#0B7B54] shadow-xs dark:bg-[#16211B] dark:text-[#34D399]'
+                        : 'text-[#55685E] dark:text-[#98ABA0]'
+                    }`}
+                  >
+                    Grammes
+                  </button>
+                </div>
+              )}
 
               <div className="grid grid-cols-[1fr_auto] gap-2">
                 <input
@@ -326,8 +387,20 @@ export function TempMealBuilder({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleAddFoodItem();
                   }}
-                  placeholder="Poids (g), ex : 250"
-                  aria-label="Poids de l’ingrédient en grammes"
+                  placeholder={
+                    effectiveIngUnitMode === 'cl'
+                      ? 'Volume (cL), ex : 25'
+                      : effectiveIngUnitMode === 'unit'
+                        ? 'Nombre d’unités, ex : 2'
+                        : 'Poids (g), ex : 250'
+                  }
+                  aria-label={
+                    effectiveIngUnitMode === 'cl'
+                      ? 'Volume de la boisson en cL'
+                      : effectiveIngUnitMode === 'unit'
+                        ? 'Nombre d’unités de l’ingrédient'
+                        : 'Poids de l’ingrédient en grammes'
+                  }
                   className="min-h-[42px] w-full min-w-0 rounded-xl border border-[#D4DFD8] bg-white px-3 text-sm tabular-nums text-[#14231C] placeholder:text-[#7D9186] focus:border-[#0D9464] focus:outline-none dark:border-[#2C3C32] dark:bg-[#16211B] dark:text-[#EAF2ED]"
                 />
                 <button

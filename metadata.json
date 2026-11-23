@@ -1,0 +1,6 @@
+{
+  "name": "Suivi Calories",
+  "description": "Journal nutritionnel quotidien clair et ergonomique pour suivre vos calories, macronutriments, repas et évolution du poids.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

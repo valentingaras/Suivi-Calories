@@ -7,14 +7,18 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 
 export type AppTab = 'today' | 'suivi' | 'pesee' | 'alim' | 'profil';
 
+export type DrinkCategory = 'beer' | 'wine' | 'soda' | 'spirit' | 'other';
+
 export interface Food {
   id: string;
   n: string;
-  k: number; // kcal per 100g
-  p: number; // protein g per 100g
-  c: number; // carbs g per 100g
-  f: number; // fat g per 100g
-  a?: number; // pure alcohol g per 100g
+  k: number; // kcal per 100g / 100ml
+  p: number; // protein g per 100g / 100ml
+  c: number; // carbs g per 100g / 100ml
+  f: number; // fat g per 100g / 100ml
+  a?: number; // pure alcohol g per 100g / 100ml
+  u?: number; // average weight of 1 unit in g
+  b?: DrinkCategory; // drink category when measured in cL
 }
 
 export interface LogEntry {
@@ -22,6 +26,8 @@ export interface LogEntry {
   foodId?: string;
   tempMealId?: string;
   pct?: number;
+  u?: number; // number of units logged (when added by unit)
+  cl?: number; // volume in cL (when added as a drink)
   n: string;
   g: number;
   k: number;

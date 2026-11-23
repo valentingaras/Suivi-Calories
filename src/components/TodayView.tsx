@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Apple,
   Calendar,
@@ -12,6 +12,7 @@ import {
   Utensils,
 } from 'lucide-react';
 import type {
+  DrinkCategory,
   Food,
   Goals,
   LogEntry,
@@ -51,7 +52,12 @@ interface TodayViewProps {
   activeInputKind: 'food' | 'temp';
   onOpenFoodPicker: () => void;
   onOpenNewFood: () => void;
-  onAddEntry: (food: Food, grams: number, meal: MealId) => void;
+  onAddEntry: (
+    food: Food,
+    grams: number,
+    meal: MealId,
+    options?: { units?: number; cl?: number }
+  ) => void;
   onAddTempMealPortion: (dish: TempMeal, percent: number, meal: MealId) => void;
   onOpenEntry: (entry: LogEntry) => void;
 }
@@ -64,7 +70,41 @@ const MEAL_ICONS: Record<MealId, typeof Sunrise> = {
 };
 
 const QUICK_GRAMS = [50, 100, 150, 200];
+const QUICK_UNITS = [1, 2, 3, 4, 6];
 const QUICK_PERCENTS = [20, 25, 33, 50, 100];
+
+const DRINK_QUICK_PRESETS: Record<
+  DrinkCategory,
+  Array<{ cl: number; label: string }>
+> = {
+  beer: [
+    { cl: 25, label: '0,25 L' },
+    { cl: 33, label: '0,33 L' },
+    { cl: 50, label: '0,5 L' },
+    { cl: 100, label: '1 L' },
+  ],
+  wine: [
+    { cl: 12, label: '12 cL' },
+    { cl: 25, label: '25 cL' },
+    { cl: 50, label: '50 cL' },
+  ],
+  soda: [
+    { cl: 25, label: '25 cL' },
+    { cl: 33, label: '33 cL' },
+  ],
+  spirit: [
+    { cl: 2, label: '2 cL' },
+    { cl: 4, label: '4 cL' },
+    { cl: 6, label: '6 cL' },
+    { cl: 10, label: '10 cL' },
+  ],
+  other: [
+    { cl: 10, label: '10 cL' },
+    { cl: 20, label: '20 cL' },
+    { cl: 25, label: '25 cL' },
+    { cl: 33, label: '33 cL' },
+  ],
+};
 
 export function TodayView({
   currentDate,
@@ -87,12 +127,14 @@ export function TodayView({
   onOpenEntry,
 }: TodayViewProps) {
   const [gramsInput, setGramsInput] = useState('');
+  const [unitMode, setUnitMode] = useState<'g' | 'unit'>('g');
   const [pctInput, setPctInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [tempErrorMsg, setTempErrorMsg] = useState('');
   const gramsInputRef = useRef<HTMLInputElement>(null);
   const pctInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const prevSelectedFoodIdRef = useRef<string>(selectedFoodId);
 
   const openDatePicker = () => {
     const input = dateInputRef.current;
@@ -138,6 +180,21 @@ export function TodayView({
     [foods, selectedFoodId]
   );
 
+  useEffect(() => {
+    if (prevSelectedFoodIdRef.current !== selectedFoodId) {
+      prevSelectedFoodIdRef.current = selectedFoodId;
+      setUnitMode(selectedFood?.u && selectedFood.u > 0 ? 'unit' : 'g');
+      setGramsInput('');
+      setErrorMsg('');
+    }
+  }, [selectedFoodId, selectedFood]);
+
+  const effectiveInputMode: 'g' | 'unit' | 'cl' = selectedFood?.b
+    ? 'cl'
+    : unitMode === 'unit' && selectedFood?.u && selectedFood.u > 0
+      ? 'unit'
+      : 'g';
+
   const selectedTempMeal = useMemo(
     () =>
       tempMeals.find((m) => m.id === selectedTempMealId) ??
@@ -146,17 +203,30 @@ export function TodayView({
     [tempMeals, selectedTempMealId]
   );
 
-  const parsedGrams = parseNum(gramsInput);
+  const parsedAmount = parseNum(gramsInput);
+  const effectiveGrams = useMemo(() => {
+    if (!(parsedAmount > 0)) return NaN;
+    if (effectiveInputMode === 'cl') {
+      return round1(parsedAmount * 10);
+    }
+    if (effectiveInputMode === 'unit' && selectedFood?.u) {
+      return round1(parsedAmount * selectedFood.u);
+    }
+    return parsedAmount;
+  }, [parsedAmount, effectiveInputMode, selectedFood]);
+
   const livePreview = useMemo(() => {
-    if (!selectedFood || !(parsedGrams > 0)) return null;
-    const ratio = parsedGrams / 100;
+    if (!selectedFood || !(effectiveGrams > 0)) return null;
+    const ratio = effectiveGrams / 100;
     return {
+      g: effectiveGrams,
       k: Math.round(selectedFood.k * ratio),
       p: round1(selectedFood.p * ratio),
       c: round1(selectedFood.c * ratio),
       f: round1(selectedFood.f * ratio),
+      al: round1((selectedFood.a || 0) * ratio),
     };
-  }, [selectedFood, parsedGrams]);
+  }, [selectedFood, effectiveGrams]);
 
   const parsedPct = parseNum(pctInput);
   const tempLivePreview = useMemo(() => {
@@ -184,6 +254,20 @@ export function TodayView({
     return map;
   }, [entries]);
 
+  const handleSwitchUnitMode = (nextMode: 'g' | 'unit') => {
+    if (nextMode === effectiveInputMode || !selectedFood?.u) return;
+    const current = parseNum(gramsInput);
+    if (current > 0) {
+      const converted =
+        nextMode === 'unit'
+          ? round1(current / selectedFood.u)
+          : round1(current * selectedFood.u);
+      setGramsInput(String(converted));
+    }
+    setUnitMode(nextMode);
+    setErrorMsg('');
+  };
+
   const handleSubmit = () => {
     if (!selectedFood) {
       setErrorMsg(
@@ -191,14 +275,28 @@ export function TodayView({
       );
       return;
     }
-    const g = parseNum(gramsInput);
-    if (!(g > 0)) {
-      setErrorMsg('Entre une quantité en grammes (ex : 100).');
+    const amt = parseNum(gramsInput);
+    if (!(amt > 0)) {
+      setErrorMsg(
+        effectiveInputMode === 'cl'
+          ? 'Entre un volume en cL (ex : 25).'
+          : effectiveInputMode === 'unit'
+            ? 'Entre un nombre d’unités (ex : 2).'
+            : 'Entre une quantité en grammes (ex : 100).'
+      );
       gramsInputRef.current?.focus();
       return;
     }
     setErrorMsg('');
-    onAddEntry(selectedFood, g, effectiveMeal);
+    if (effectiveInputMode === 'cl') {
+      onAddEntry(selectedFood, round1(amt * 10), effectiveMeal, { cl: amt });
+    } else if (effectiveInputMode === 'unit' && selectedFood.u) {
+      onAddEntry(selectedFood, round1(amt * selectedFood.u), effectiveMeal, {
+        units: amt,
+      });
+    } else {
+      onAddEntry(selectedFood, amt, effectiveMeal);
+    }
     setGramsInput('');
   };
 
@@ -569,13 +667,17 @@ export function TodayView({
               </>
             ) : (
               <>
-                <div className="grid grid-cols-[1fr_96px] gap-2.5 sm:grid-cols-12 sm:gap-3 min-w-0">
+                <div className="grid grid-cols-[1fr_104px] gap-2.5 sm:grid-cols-12 sm:gap-3 min-w-0">
                   <div className="min-w-0 sm:col-span-8">
-                    <div className="mb-1 flex items-center justify-between text-xs font-medium text-[#52655B] dark:text-[#98ABA0]">
+                    <div className="mb-1 flex items-center justify-between gap-2 text-xs font-medium text-[#52655B] dark:text-[#98ABA0]">
                       <label htmlFor="food-picker-trigger">Aliment</label>
                       {selectedFood && (
-                        <span className="tabular-nums font-semibold text-[#0D9464] dark:text-[#34D399]">
-                          {selectedFood.k} kcal / 100g
+                        <span className="truncate tabular-nums font-semibold text-[#0D9464] dark:text-[#34D399]">
+                          {effectiveInputMode === 'cl'
+                            ? `${selectedFood.k} kcal / 100 ml`
+                            : effectiveInputMode === 'unit' && selectedFood.u
+                              ? `${Math.round((selectedFood.k * selectedFood.u) / 100)} kcal / unité (${formatDecimalFr(selectedFood.u)} g)`
+                              : `${selectedFood.k} kcal / 100g`}
                         </span>
                       )}
                     </div>
@@ -607,14 +709,28 @@ export function TodayView({
                       htmlFor="grams-input"
                       className="mb-1 block text-xs font-medium text-[#52655B] dark:text-[#98ABA0]"
                     >
-                      Grammes
+                      {effectiveInputMode === 'cl'
+                        ? 'Volume (cL)'
+                        : effectiveInputMode === 'unit'
+                          ? 'Unités'
+                          : 'Grammes'}
                     </label>
                     <input
                       id="grams-input"
                       ref={gramsInputRef}
                       type="text"
                       inputMode="decimal"
-                      placeholder="100"
+                      placeholder={
+                        effectiveInputMode === 'cl'
+                          ? selectedFood?.b === 'wine'
+                            ? '12'
+                            : selectedFood?.b === 'spirit'
+                              ? '4'
+                              : '25'
+                          : effectiveInputMode === 'unit'
+                            ? '1'
+                            : '100'
+                      }
                       value={gramsInput}
                       onChange={(e) => setGramsInput(e.target.value)}
                       onKeyDown={handleGramsKeyDown}
@@ -623,36 +739,96 @@ export function TodayView({
                   </div>
                 </div>
 
+                {/* Unit Mode Switcher (when solid food has average unit weight) */}
+                {!selectedFood?.b && selectedFood?.u && selectedFood.u > 0 && (
+                  <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                    <div
+                      role="group"
+                      aria-label="Mode de saisie"
+                      className="inline-flex rounded-xl border border-[#DCE5DF] bg-[#ECF2EE] p-0.5 dark:border-[#25332B] dark:bg-[#131D17]"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchUnitMode('unit')}
+                        className={`min-h-[30px] rounded-lg px-2.5 text-xs font-semibold transition-colors cursor-pointer ${
+                          effectiveInputMode === 'unit'
+                            ? 'bg-white text-[#0B7B54] shadow-xs dark:bg-[#1D2B23] dark:text-[#34D399]'
+                            : 'text-[#55685E] hover:text-[#14231C] dark:text-[#98ABA0] dark:hover:text-[#EAF2ED]'
+                        }`}
+                      >
+                        Unités ({formatDecimalFr(selectedFood.u)} g)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchUnitMode('g')}
+                        className={`min-h-[30px] rounded-lg px-2.5 text-xs font-semibold transition-colors cursor-pointer ${
+                          effectiveInputMode === 'g'
+                            ? 'bg-white text-[#0B7B54] shadow-xs dark:bg-[#1D2B23] dark:text-[#34D399]'
+                            : 'text-[#55685E] hover:text-[#14231C] dark:text-[#98ABA0] dark:hover:text-[#EAF2ED]'
+                        }`}
+                      >
+                        Grammes
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Quick Portion Buttons + Live Preview */}
                 <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {QUICK_GRAMS.map((q) => (
-                      <button
-                        key={q}
-                        type="button"
-                        onClick={() => {
-                          setGramsInput(String(q));
-                          setErrorMsg('');
-                        }}
-                        className={`min-h-[30px] rounded-lg border px-2.5 py-0.5 text-xs font-semibold tabular-nums transition-colors cursor-pointer ${
-                          gramsInput === String(q)
-                            ? 'border-[#0D9464] bg-[#ECF8F1] text-[#0B7B54] dark:border-[#34D399] dark:bg-[#18382A] dark:text-[#34D399]'
-                            : 'border-[#DCE5DF] bg-[#F7FAF8] text-[#4C5F54] hover:bg-[#EDF3EF] dark:border-[#27362D] dark:bg-[#1B2821] dark:text-[#A9BCB0] dark:hover:bg-[#223229]'
-                        }`}
-                      >
-                        {q} g
-                      </button>
-                    ))}
+                    {effectiveInputMode === 'cl' && selectedFood?.b
+                      ? DRINK_QUICK_PRESETS[selectedFood.b].map((preset) => (
+                          <button
+                            key={preset.cl}
+                            type="button"
+                            onClick={() => {
+                              setGramsInput(String(preset.cl));
+                              setErrorMsg('');
+                            }}
+                            className={`min-h-[30px] rounded-lg border px-2.5 py-0.5 text-xs font-semibold tabular-nums transition-colors cursor-pointer ${
+                              gramsInput === String(preset.cl)
+                                ? 'border-[#0D9464] bg-[#ECF8F1] text-[#0B7B54] dark:border-[#34D399] dark:bg-[#18382A] dark:text-[#34D399]'
+                                : 'border-[#DCE5DF] bg-[#F7FAF8] text-[#4C5F54] hover:bg-[#EDF3EF] dark:border-[#27362D] dark:bg-[#1B2821] dark:text-[#A9BCB0] dark:hover:bg-[#223229]'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        ))
+                      : (effectiveInputMode === 'unit' ? QUICK_UNITS : QUICK_GRAMS).map(
+                          (q) => (
+                            <button
+                              key={q}
+                              type="button"
+                              onClick={() => {
+                                setGramsInput(String(q));
+                                setErrorMsg('');
+                              }}
+                              className={`min-h-[30px] rounded-lg border px-2.5 py-0.5 text-xs font-semibold tabular-nums transition-colors cursor-pointer ${
+                                gramsInput === String(q)
+                                  ? 'border-[#0D9464] bg-[#ECF8F1] text-[#0B7B54] dark:border-[#34D399] dark:bg-[#18382A] dark:text-[#34D399]'
+                                  : 'border-[#DCE5DF] bg-[#F7FAF8] text-[#4C5F54] hover:bg-[#EDF3EF] dark:border-[#27362D] dark:bg-[#1B2821] dark:text-[#A9BCB0] dark:hover:bg-[#223229]'
+                              }`}
+                            >
+                              {effectiveInputMode === 'unit' ? `${q} u` : `${q} g`}
+                            </button>
+                          )
+                        )}
                   </div>
 
                   {livePreview && (
                     <p className="text-xs font-medium tabular-nums text-[#52655B] dark:text-[#98ABA0]">
                       <strong className="text-[#14231C] dark:text-[#EAF2ED]">
                         {livePreview.k} kcal
-                      </strong>{' '}
+                      </strong>
+                      {effectiveInputMode === 'unit'
+                        ? ` (${formatDecimalFr(livePreview.g)} g)`
+                        : ''}{' '}
                       · P {formatDecimalFr(livePreview.p)} · G{' '}
                       {formatDecimalFr(livePreview.c)} · L{' '}
                       {formatDecimalFr(livePreview.f)}
+                      {livePreview.al > 0
+                        ? ` · Alc ${formatDecimalFr(livePreview.al / 10)} d`
+                        : ''}
                     </p>
                   )}
                 </div>
@@ -714,7 +890,13 @@ export function TodayView({
                             ? `${formatDecimalFr(x.pct)} % du plat${
                                 x.g > 0 ? ` (${formatDecimalFr(x.g)} g)` : ''
                               }`
-                            : `${formatDecimalFr(x.g)} g`}{' '}
+                            : x.cl && x.cl > 0
+                              ? `${formatDecimalFr(x.cl)} cL`
+                              : x.u && x.u > 0
+                                ? `${formatDecimalFr(x.u)} ${
+                                    x.u < 2 ? 'unité' : 'unités'
+                                  } (${formatDecimalFr(x.g)} g)`
+                                : `${formatDecimalFr(x.g)} g`}{' '}
                           · Prot. {formatDecimalFr(x.p)} · Glu.{' '}
                           {formatDecimalFr(x.c)} · Lip. {formatDecimalFr(x.f)}
                           {x.al

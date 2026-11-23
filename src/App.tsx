@@ -140,13 +140,22 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleAddEntry = (food: Food, grams: number, meal: MealId) => {
+  const handleAddEntry = (
+    food: Food,
+    grams: number,
+    meal: MealId,
+    options?: { units?: number; cl?: number }
+  ) => {
     const ratio = grams / 100;
     const entry: LogEntry = {
       id: `e${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       foodId: food.id,
       n: food.n,
-      g: grams,
+      g: round1(grams),
+      ...(options?.units && options.units > 0
+        ? { u: round1(options.units) }
+        : {}),
+      ...(options?.cl && options.cl > 0 ? { cl: round1(options.cl) } : {}),
       k: food.k * ratio,
       p: food.p * ratio,
       c: food.c * ratio,
@@ -247,7 +256,8 @@ export default function App() {
   const handleUpdateEntry = (
     entryId: string,
     newAmount: number,
-    newMeal: MealId
+    newMeal: MealId,
+    options?: { units?: number; cl?: number }
   ) => {
     updateState((prev) => {
       const dayList = prev.log[currentDate] || [];
@@ -268,9 +278,9 @@ export default function App() {
           };
         }
         const r = x.g > 0 ? newAmount / x.g : 0;
-        return {
+        const nextEntry: LogEntry = {
           ...x,
-          g: newAmount,
+          g: round1(newAmount),
           k: x.k * r,
           p: x.p * r,
           c: x.c * r,
@@ -278,6 +288,25 @@ export default function App() {
           al: (x.al || 0) * r,
           m: newMeal,
         };
+        if (options?.units !== undefined) {
+          if (options.units > 0) {
+            nextEntry.u = round1(options.units);
+          } else {
+            delete nextEntry.u;
+          }
+        } else if (x.u && x.u > 0 && r > 0) {
+          nextEntry.u = round1(x.u * r);
+        }
+        if (options?.cl !== undefined) {
+          if (options.cl > 0) {
+            nextEntry.cl = round1(options.cl);
+          } else {
+            delete nextEntry.cl;
+          }
+        } else if (x.cl && x.cl > 0 && r > 0) {
+          nextEntry.cl = round1(x.cl * r);
+        }
+        return nextEntry;
       });
       return {
         ...prev,
@@ -343,6 +372,8 @@ export default function App() {
       c: data.c,
       f: data.f,
       ...(data.a && data.a > 0 ? { a: data.a } : {}),
+      ...(data.u && data.u > 0 ? { u: round1(data.u) } : {}),
+      ...(data.b ? { b: data.b } : {}),
     };
     const linked = foodFormState.linkedEntry;
     const savedId = existingId || `f${Date.now()}`;
@@ -476,6 +507,8 @@ export default function App() {
             c: f.c,
             f: f.f,
             ...(f.a && f.a > 0 ? { a: f.a } : {}),
+            ...(f.u && f.u > 0 ? { u: f.u } : {}),
+            ...(f.b ? { b: f.b } : {}),
           });
           added += 1;
         }
@@ -686,6 +719,7 @@ export default function App() {
 
       <EntryEditModal
         entry={editingEntry}
+        foods={state.foods}
         onClose={() => setEditingEntry(null)}
         onUpdate={handleUpdateEntry}
         onEditFood={handleEditFoodFromEntry}

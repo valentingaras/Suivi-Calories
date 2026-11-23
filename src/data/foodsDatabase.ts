@@ -15,7 +15,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 160,
     "p": 2,
     "c": 1.8,
-    "f": 14.7
+    "f": 14.7,
+    "u": 150
   },
   {
     "id": "csv_2",
@@ -23,7 +24,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 280,
     "p": 8.5,
     "c": 57,
-    "f": 2
+    "f": 2,
+    "u": 250
   },
   {
     "id": "csv_3",
@@ -39,7 +41,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 365,
     "p": 8.3,
     "c": 47,
-    "f": 16
+    "f": 16,
+    "u": 75
   },
   {
     "id": "csv_5",
@@ -64,7 +67,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0.5,
     "c": 4.1,
     "f": 0,
-    "a": 3.5
+    "a": 3.5,
+    "b": "beer"
   },
   {
     "id": "csv_8",
@@ -73,7 +77,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0.5,
     "c": 7.8,
     "f": 0,
-    "a": 6
+    "a": 6,
+    "b": "beer"
   },
   {
     "id": "csv_9",
@@ -81,7 +86,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 228,
     "p": 12,
     "c": 22.5,
-    "f": 10
+    "f": 10,
+    "u": 215
   },
   {
     "id": "csv_10",
@@ -89,7 +95,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 432,
     "p": 11,
     "c": 92.5,
-    "f": 2
+    "f": 2,
+    "u": 10
   },
   {
     "id": "csv_11",
@@ -113,7 +120,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 241,
     "p": 0.3,
     "c": 37.4,
-    "f": 10
+    "f": 10,
+    "u": 10
   },
   {
     "id": "csv_14",
@@ -121,7 +129,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 487,
     "p": 3.7,
     "c": 82,
-    "f": 16
+    "f": 16,
+    "u": 29
   },
   {
     "id": "csv_15",
@@ -137,7 +146,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 470,
     "p": 5.9,
     "c": 55.4,
-    "f": 25
+    "f": 25,
+    "u": 45
   },
   {
     "id": "csv_17",
@@ -185,7 +195,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 41,
     "p": 0.9,
     "c": 8.9,
-    "f": 0.2
+    "f": 0.2,
+    "u": 100
   },
   {
     "id": "csv_23",
@@ -194,7 +205,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0,
     "c": 1.3,
     "f": 0,
-    "a": 9.5
+    "a": 9.5,
+    "b": "wine"
   },
   {
     "id": "csv_24",
@@ -203,7 +215,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0,
     "c": 2,
     "f": 0,
-    "a": 9.5
+    "a": 9.5,
+    "b": "wine"
   },
   {
     "id": "csv_25",
@@ -260,7 +273,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0,
     "c": 3.4,
     "f": 0,
-    "a": 3
+    "a": 3,
+    "b": "beer"
   },
   {
     "id": "csv_32",
@@ -348,7 +362,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 400,
     "p": 8,
     "c": 42.5,
-    "f": 22
+    "f": 22,
+    "u": 55
   },
   {
     "id": "csv_43",
@@ -380,7 +395,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 73,
     "p": 2.5,
     "c": 15.3,
-    "f": 0.2
+    "f": 0.2,
+    "u": 25
   },
   {
     "id": "csv_47",
@@ -460,7 +476,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 295,
     "p": 6,
     "c": 31.8,
-    "f": 16
+    "f": 16,
+    "u": 90
   },
   {
     "id": "csv_57",
@@ -484,7 +501,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 250,
     "p": 15,
     "c": 25,
-    "f": 10
+    "f": 10,
+    "u": 25
   },
   {
     "id": "csv_60",
@@ -532,7 +550,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 13,
     "p": 0,
     "c": 1.2,
-    "f": 0
+    "f": 0,
+    "b": "soda"
   },
   {
     "id": "csv_66",
@@ -541,7 +560,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0,
     "c": 13,
     "f": 0,
-    "a": 8
+    "a": 8,
+    "b": "beer"
   },
   {
     "id": "csv_67",
@@ -557,7 +577,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 45,
     "p": 0.6,
     "c": 10.2,
-    "f": 0.2
+    "f": 0.2,
+    "b": "soda"
   },
   {
     "id": "csv_69",
@@ -573,7 +594,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 634.58,
     "p": 46.956,
     "c": 15.5,
-    "f": 12
+    "f": 12,
+    "u": 350
   },
   {
     "id": "csv_71",
@@ -597,7 +619,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 46,
     "p": 3.3,
     "c": 4.6,
-    "f": 1.6
+    "f": 1.6,
+    "b": "other"
   },
   {
     "id": "csv_74",
@@ -605,7 +628,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 34,
     "p": 3.3,
     "c": 4.8,
-    "f": 0.2
+    "f": 0.2,
+    "b": "other"
   },
   {
     "id": "csv_75",
@@ -653,7 +677,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 436,
     "p": 9,
     "c": 64,
-    "f": 16
+    "f": 16,
+    "u": 18
   },
   {
     "id": "csv_81",
@@ -685,7 +710,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 200,
     "p": 5,
     "c": 21.5,
-    "f": 10
+    "f": 10,
+    "u": 25
   },
   {
     "id": "csv_85",
@@ -717,7 +743,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 63,
     "p": 0.8,
     "c": 7.2,
-    "f": 0.2
+    "f": 0.2,
+    "u": 500
   },
   {
     "id": "csv_89",
@@ -813,7 +840,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 147,
     "p": 13,
     "c": 5.8,
-    "f": 8
+    "f": 8,
+    "u": 60
   },
   {
     "id": "csv_101",
@@ -821,7 +849,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 40,
     "p": 1.1,
     "c": 8.5,
-    "f": 0.2
+    "f": 0.2,
+    "u": 100
   },
   {
     "id": "csv_102",
@@ -837,7 +866,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 450,
     "p": 8,
     "c": 48.2,
-    "f": 25
+    "f": 25,
+    "u": 65
   },
   {
     "id": "csv_104",
@@ -933,7 +963,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 195,
     "p": 0,
     "c": 48.8,
-    "f": 0
+    "f": 0,
+    "b": "spirit"
   },
   {
     "id": "csv_116",
@@ -1005,7 +1036,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 81,
     "p": 2,
     "c": 17.8,
-    "f": 0.2
+    "f": 0.2,
+    "u": 150
   },
   {
     "id": "csv_125",
@@ -1149,7 +1181,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 281,
     "p": 0,
     "c": 68.2,
-    "f": 0
+    "f": 0,
+    "b": "spirit"
   },
   {
     "id": "csv_143",
@@ -1181,7 +1214,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 100,
     "p": 2,
     "c": 0.5,
-    "f": 10
+    "f": 10,
+    "u": 35
   },
   {
     "id": "csv_147",
@@ -1229,7 +1263,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 25,
     "p": 0,
     "c": 3.9,
-    "f": 0.2
+    "f": 0.2,
+    "u": 120
   },
   {
     "id": "csv_153",
@@ -1254,7 +1289,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0,
     "c": 3.8,
     "f": 0,
-    "a": 9.5
+    "a": 9.5,
+    "b": "wine"
   },
   {
     "id": "csv_156",
@@ -1263,7 +1299,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0.1,
     "c": 4.5,
     "f": 0,
-    "a": 9.5
+    "a": 9.5,
+    "b": "wine"
   },
   {
     "id": "csv_157",
@@ -1295,7 +1332,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 200,
     "p": 12,
     "c": 15.5,
-    "f": 10
+    "f": 10,
+    "u": 25
   },
   {
     "id": "csv_161",
@@ -1303,7 +1341,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 316,
     "p": 8.7,
     "c": 65.8,
-    "f": 2
+    "f": 2,
+    "u": 60
   },
   {
     "id": "csv_162",
@@ -1311,7 +1350,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 285,
     "p": 23,
     "c": 25.8,
-    "f": 10
+    "f": 10,
+    "u": 35
   },
   {
     "id": "csv_163",
@@ -1319,7 +1359,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 180,
     "p": 13,
     "c": 9.5,
-    "f": 10
+    "f": 10,
+    "u": 35
   },
   {
     "id": "csv_164",
@@ -1327,7 +1368,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 36,
     "p": 4.3,
     "c": 4.2,
-    "f": 0.2
+    "f": 0.2,
+    "u": 125
   },
   {
     "id": "csv_165",
@@ -1335,7 +1377,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 252,
     "p": 9.5,
     "c": 49,
-    "f": 2
+    "f": 2,
+    "u": 85
   },
   {
     "id": "csv_166",
@@ -1359,7 +1402,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 257,
     "p": 4.2,
     "c": 55.6,
-    "f": 2
+    "f": 2,
+    "u": 10
   },
   {
     "id": "csv_169",
@@ -1367,7 +1411,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 65,
     "p": 3.3,
     "c": 4.8,
-    "f": 3.6
+    "f": 3.6,
+    "b": "other"
   },
   {
     "id": "csv_170",
@@ -1392,7 +1437,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0,
     "c": 6.5,
     "f": 0,
-    "a": 32
+    "a": 32,
+    "b": "spirit"
   },
   {
     "id": "csv_173",
@@ -1504,7 +1550,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 89,
     "p": 1.1,
     "c": 20.2,
-    "f": 0.3
+    "f": 0.3,
+    "u": 120
   },
   {
     "id": "csv_187",
@@ -1528,7 +1575,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 2,
     "p": 0.1,
     "c": 0.3,
-    "f": 0
+    "f": 0,
+    "b": "other"
   },
   {
     "id": "csv_190",
@@ -1616,7 +1664,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 46,
     "p": 0.1,
     "c": 11.3,
-    "f": 0.1
+    "f": 0.1,
+    "b": "soda"
   },
   {
     "id": "csv_201",
@@ -1624,7 +1673,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 61,
     "p": 1.1,
     "c": 14.7,
-    "f": 0.5
+    "f": 0.5,
+    "u": 75
   },
   {
     "id": "csv_202",
@@ -1632,7 +1682,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 45,
     "p": 1,
     "c": 6.7,
-    "f": 1.5
+    "f": 1.5,
+    "b": "other"
   },
   {
     "id": "csv_203",
@@ -1664,7 +1715,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 47,
     "p": 0.9,
     "c": 9.4,
-    "f": 0.1
+    "f": 0.1,
+    "u": 150
   },
   {
     "id": "csv_207",
@@ -1672,7 +1724,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 265,
     "p": 9,
     "c": 49,
-    "f": 3.5
+    "f": 3.5,
+    "u": 30
   },
   {
     "id": "csv_208",
@@ -1696,7 +1749,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 57,
     "p": 0.4,
     "c": 12.1,
-    "f": 0.1
+    "f": 0.1,
+    "u": 150
   },
   {
     "id": "csv_211",
@@ -1744,7 +1798,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 60,
     "p": 10,
     "c": 4,
-    "f": 0.2
+    "f": 0.2,
+    "u": 140
   },
   {
     "id": "csv_217",
@@ -1752,7 +1807,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 215,
     "p": 19,
     "c": 0,
-    "f": 15
+    "f": 15,
+    "u": 100
   },
   {
     "id": "csv_218",
@@ -1768,7 +1824,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 310,
     "p": 8.5,
     "c": 52,
-    "f": 8
+    "f": 8,
+    "u": 60
   },
   {
     "id": "csv_220",
@@ -1776,7 +1833,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 97,
     "p": 9,
     "c": 3.8,
-    "f": 5
+    "f": 5,
+    "u": 150
   },
   {
     "id": "csv_221",
@@ -1784,7 +1842,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 61,
     "p": 3.5,
     "c": 4.7,
-    "f": 3.3
+    "f": 3.3,
+    "u": 125
   },
   {
     "id": "std_1",
@@ -1792,7 +1851,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 52,
     "p": 0.3,
     "c": 11.6,
-    "f": 0.2
+    "f": 0.2,
+    "u": 150
   },
   {
     "id": "std_2",
@@ -1800,7 +1860,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 47,
     "p": 0.8,
     "c": 10.5,
-    "f": 0.2
+    "f": 0.2,
+    "u": 65
   },
   {
     "id": "std_3",
@@ -1816,7 +1877,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 48,
     "p": 0.9,
     "c": 9,
-    "f": 0.2
+    "f": 0.2,
+    "u": 45
   },
   {
     "id": "std_5",
@@ -1824,7 +1886,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 42,
     "p": 0.9,
     "c": 9.5,
-    "f": 0.2
+    "f": 0.2,
+    "u": 130
   },
   {
     "id": "std_6",
@@ -1832,7 +1895,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 44,
     "p": 1,
     "c": 9.6,
-    "f": 0.3
+    "f": 0.3,
+    "u": 130
   },
   {
     "id": "std_7",
@@ -1840,7 +1904,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 46,
     "p": 0.7,
     "c": 10.2,
-    "f": 0.2
+    "f": 0.2,
+    "u": 50
   },
   {
     "id": "std_8",
@@ -1872,7 +1937,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 62,
     "p": 0.8,
     "c": 14,
-    "f": 0.4
+    "f": 0.4,
+    "u": 250
   },
   {
     "id": "std_12",
@@ -1888,7 +1954,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 38,
     "p": 0.7,
     "c": 8,
-    "f": 0.1
+    "f": 0.1,
+    "u": 220
   },
   {
     "id": "std_14",
@@ -1896,7 +1963,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 55,
     "p": 0.3,
     "c": 12.5,
-    "f": 0.2
+    "f": 0.2,
+    "u": 100
   },
   {
     "id": "std_15",
@@ -1904,7 +1972,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 282,
     "p": 2.5,
     "c": 68,
-    "f": 0.4
+    "f": 0.4,
+    "u": 10
   },
   {
     "id": "std_16",
@@ -2016,7 +2085,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 210,
     "p": 23,
     "c": 0,
-    "f": 13
+    "f": 13,
+    "u": 150
   },
   {
     "id": "std_30",
@@ -2024,7 +2094,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 285,
     "p": 16,
     "c": 1,
-    "f": 24
+    "f": 24,
+    "u": 55
   },
   {
     "id": "std_31",
@@ -2032,7 +2103,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 295,
     "p": 17,
     "c": 1.5,
-    "f": 25
+    "f": 25,
+    "u": 55
   },
   {
     "id": "std_32",
@@ -2056,7 +2128,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 105,
     "p": 22,
     "c": 1,
-    "f": 1.5
+    "f": 1.5,
+    "u": 40
   },
   {
     "id": "std_35",
@@ -2120,7 +2193,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 98,
     "p": 8.5,
     "c": 12,
-    "f": 1.5
+    "f": 1.5,
+    "u": 18
   },
   {
     "id": "std_43",
@@ -2128,7 +2202,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 195,
     "p": 16,
     "c": 8.5,
-    "f": 10
+    "f": 10,
+    "u": 100
   },
   {
     "id": "std_44",
@@ -2136,7 +2211,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 49,
     "p": 4.2,
     "c": 4.8,
-    "f": 1.4
+    "f": 1.4,
+    "u": 125
   },
   {
     "id": "std_45",
@@ -2144,7 +2220,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 92,
     "p": 3.5,
     "c": 14.5,
-    "f": 2.1
+    "f": 2.1,
+    "u": 125
   },
   {
     "id": "std_46",
@@ -2208,7 +2285,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 17,
     "p": 0.5,
     "c": 0.5,
-    "f": 1.3
+    "f": 1.3,
+    "b": "other"
   },
   {
     "id": "std_54",
@@ -2216,7 +2294,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 38,
     "p": 3.3,
     "c": 1.5,
-    "f": 2
+    "f": 2,
+    "b": "other"
   },
   {
     "id": "std_55",
@@ -2248,7 +2327,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 275,
     "p": 8.5,
     "c": 49,
-    "f": 4.5
+    "f": 4.5,
+    "u": 60
   },
   {
     "id": "std_59",
@@ -2280,7 +2360,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 385,
     "p": 8,
     "c": 81,
-    "f": 2.8
+    "f": 2.8,
+    "u": 9
   },
   {
     "id": "std_63",
@@ -2304,7 +2385,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 205,
     "p": 6.5,
     "c": 27,
-    "f": 7.5
+    "f": 7.5,
+    "u": 50
   },
   {
     "id": "std_66",
@@ -2312,7 +2394,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 225,
     "p": 6.5,
     "c": 29,
-    "f": 9
+    "f": 9,
+    "u": 45
   },
   {
     "id": "std_67",
@@ -2320,7 +2403,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 445,
     "p": 6.5,
     "c": 54,
-    "f": 22
+    "f": 22,
+    "u": 25
   },
   {
     "id": "std_68",
@@ -2336,7 +2420,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 485,
     "p": 5.5,
     "c": 64,
-    "f": 23
+    "f": 23,
+    "u": 35
   },
   {
     "id": "std_70",
@@ -2344,7 +2429,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 435,
     "p": 8,
     "c": 74,
-    "f": 12
+    "f": 12,
+    "u": 8
   },
   {
     "id": "std_71",
@@ -2352,7 +2438,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 575,
     "p": 8.5,
     "c": 34,
-    "f": 42
+    "f": 42,
+    "u": 5
   },
   {
     "id": "std_72",
@@ -2360,7 +2447,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 545,
     "p": 7.5,
     "c": 56,
-    "f": 32
+    "f": 32,
+    "u": 5
   },
   {
     "id": "std_73",
@@ -2392,7 +2480,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 415,
     "p": 6.5,
     "c": 66,
-    "f": 13
+    "f": 13,
+    "u": 25
   },
   {
     "id": "std_77",
@@ -2472,7 +2561,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 1,
     "p": 0,
     "c": 0.2,
-    "f": 0
+    "f": 0,
+    "b": "other"
   },
   {
     "id": "std_87",
@@ -2480,7 +2570,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 42,
     "p": 0,
     "c": 10.6,
-    "f": 0
+    "f": 0,
+    "b": "soda"
   },
   {
     "id": "std_88",
@@ -2488,7 +2579,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 0,
     "p": 0,
     "c": 0,
-    "f": 0
+    "f": 0,
+    "b": "soda"
   },
   {
     "id": "std_89",
@@ -2496,7 +2588,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 30,
     "p": 1.6,
     "c": 2.4,
-    "f": 1.5
+    "f": 1.5,
+    "b": "other"
   },
   {
     "id": "std_90",
@@ -2504,7 +2597,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 75,
     "p": 3,
     "c": 11,
-    "f": 2
+    "f": 2,
+    "b": "other"
   },
   {
     "id": "std_91",
@@ -2513,7 +2607,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0.1,
     "c": 2.8,
     "f": 0,
-    "a": 9.5
+    "a": 9.5,
+    "b": "wine"
   },
   {
     "id": "std_92",
@@ -2522,7 +2617,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0,
     "c": 7.5,
     "f": 0,
-    "a": 7.5
+    "a": 7.5,
+    "b": "wine"
   },
   {
     "id": "std_93",
@@ -2531,7 +2627,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 0,
     "c": 0,
     "f": 0,
-    "a": 32
+    "a": 32,
+    "b": "spirit"
   },
   {
     "id": "std_94",
@@ -2547,7 +2644,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 265,
     "p": 13.5,
     "c": 22,
-    "f": 13.5
+    "f": 13.5,
+    "u": 140
   },
   {
     "id": "std_96",
@@ -2603,7 +2701,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 330,
     "p": 13,
     "c": 32,
-    "f": 17
+    "f": 17,
+    "u": 25
   },
   {
     "id": "std_103",
@@ -2611,7 +2710,8 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 215,
     "p": 7.5,
     "c": 24,
-    "f": 9.5
+    "f": 9.5,
+    "u": 55
   },
   {
     "id": "std_104",
@@ -2635,6 +2735,42 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "k": 165,
     "p": 9.5,
     "c": 11.5,
-    "f": 9.0
+    "f": 9
+  },
+  {
+    "id": "std_107",
+    "n": "Barre chocolatée (type Mars / Snickers)",
+    "k": 470,
+    "p": 5,
+    "c": 60,
+    "f": 22,
+    "u": 50
+  },
+  {
+    "id": "std_108",
+    "n": "Bonbons gélifiés",
+    "k": 343,
+    "p": 6,
+    "c": 77,
+    "f": 0.2,
+    "u": 5
+  },
+  {
+    "id": "std_109",
+    "n": "California roll",
+    "k": 160,
+    "p": 4.5,
+    "c": 24,
+    "f": 4.5,
+    "u": 30
+  },
+  {
+    "id": "std_110",
+    "n": "Figue fraîche",
+    "k": 74,
+    "p": 0.8,
+    "c": 16,
+    "f": 0.3,
+    "u": 50
   }
 ];
