@@ -2612,5 +2612,29 @@ export const DEFAULT_FOODS_DB: Food[] = [
     "p": 7.5,
     "c": 24,
     "f": 9.5
+  },
+  {
+    "id": "std_104",
+    "n": "Morue dessalée cuite",
+    "k": 100,
+    "p": 21,
+    "c": 0,
+    "f": 1.2
+  },
+  {
+    "id": "std_105",
+    "n": "Morue salée séchée",
+    "k": 290,
+    "p": 55,
+    "c": 0,
+    "f": 2.5
+  },
+  {
+    "id": "std_106",
+    "n": "Brandade de morue",
+    "k": 165,
+    "p": 9.5,
+    "c": 11.5,
+    "f": 9.0
   }
 ];
