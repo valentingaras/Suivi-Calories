@@ -9,15 +9,23 @@ import {
   formatShortDate,
   round1,
 } from '../utils/nutrition';
+import { MetabolismCard } from './MetabolismCard';
 
 interface SuiviViewProps {
   log: Record<string, LogEntry[]>;
   goals: Goals;
   weights: WeightEntry[];
   onOpenDay: (dk: string) => void;
+  onApplyGoalKcal?: (nextKcal: number) => void;
 }
 
-export function SuiviView({ log, goals, weights, onOpenDay }: SuiviViewProps) {
+export function SuiviView({
+  log,
+  goals,
+  weights,
+  onOpenDay,
+  onApplyGoalKcal,
+}: SuiviViewProps) {
   const [hoveredDayIdx, setHoveredDayIdx] = useState<number | null>(null);
   const [hoveredWeightIdx, setHoveredWeightIdx] = useState<number | null>(null);
 
@@ -406,6 +414,14 @@ export function SuiviView({ log, goals, weights, onOpenDay }: SuiviViewProps) {
           )}
         </section>
       </div>
+
+      {/* Real Metabolism Estimate */}
+      <MetabolismCard
+        log={log}
+        goals={goals}
+        weights={weights}
+        onApplyGoalKcal={onApplyGoalKcal}
+      />
 
       {/* Meal History */}
       <section className="rounded-2xl border border-[#E2EAE5] bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(16,40,28,0.04)] dark:border-[#25332B] dark:bg-[#16211B] dark:shadow-none">

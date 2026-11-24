@@ -563,6 +563,12 @@ export default function App() {
             goals={state.goals}
             weights={state.weights}
             onOpenDay={(dk) => setDetailDayKey(dk)}
+            onApplyGoalKcal={(nextKcal) =>
+              handleSaveGoals({
+                ...state.goals,
+                k: nextKcal,
+              })
+            }
           />
         )}
 
