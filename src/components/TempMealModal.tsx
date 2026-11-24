@@ -66,7 +66,6 @@ export function TempMealBuilder({
     setCustomFat('');
     setCustomGrams('');
     setError('');
-    setTimeout(() => nameInputRef.current?.focus(), 20);
   }, [editingMeal]);
 
   const sortedFoods = useMemo(

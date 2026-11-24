@@ -305,13 +305,9 @@ export function FoodFormModal({
       setOffError('');
       setOffResults([]);
       setOffInfo('');
-      if (nextTab === 'food') {
+      if (nextTab === 'food' && autoFocusOff) {
         setTimeout(() => {
-          if (autoFocusOff) {
-            offRef.current?.focus();
-          } else {
-            nameRef.current?.focus();
-          }
+          offRef.current?.focus();
         }, 20);
       }
     } else {
@@ -950,10 +946,6 @@ export function EntryEditModal({
       );
       setMeal(mealOf(entry));
       setError('');
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 20);
     }
   }, [entry]);
 
