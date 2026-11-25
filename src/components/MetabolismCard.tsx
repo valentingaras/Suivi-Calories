@@ -73,19 +73,21 @@ export function MetabolismCard({
 
   const { prerequisites: pre } = estimate;
   const weightCoveredDays = pre.weightCount >= 2 ? pre.weightSpanDays + 1 : 0;
-  const spanPct = Math.min(100, Math.round((weightCoveredDays / pre.minSpanDays) * 100));
+  const spanPct = Math.min(
+    100,
+    Math.round((weightCoveredDays / pre.targetSpanDays) * 100)
+  );
   const weightPct = Math.min(
     100,
     Math.round((pre.weightCount / pre.minWeightCount) * 100)
   );
-  const minValidDays = Math.ceil(pre.minSpanDays * pre.minCoverageRatio);
   const coveragePct = Math.round(pre.coverageRatio * 100);
   const intakeBarPct = Math.min(
     100,
     Math.round(
       Math.min(
         pre.coverageRatio / pre.minCoverageRatio,
-        pre.validIntakeCount / minValidDays
+        pre.validIntakeCount / pre.minValidIntakeCount
       ) * 100
     )
   );
@@ -242,7 +244,8 @@ export function MetabolismCard({
                       : 'text-[#5B6E64] dark:text-[#98ABA0]'
                   }`}
                 >
-                  {weightCoveredDays} / {pre.minSpanDays} jours
+                  {weightCoveredDays} / {pre.targetSpanDays} jours
+                  {windowDays !== 'all' ? ` (min. ${pre.minSpanDays} j)` : ' min.'}
                   {pre.hasEnoughSpan ? ' · Validé' : ''}
                 </span>
               </div>
@@ -300,7 +303,7 @@ export function MetabolismCard({
                       : 'text-[#5B6E64] dark:text-[#98ABA0]'
                   }`}
                 >
-                  {coveragePct} % ({pre.validIntakeCount} j · min. {minValidDays} j et 70 %)
+                  {coveragePct} % ({pre.validIntakeCount} j · min. {pre.minValidIntakeCount} j et 70 %)
                   {pre.hasEnoughCoverage ? ' · Validé' : ''}
                 </span>
               </div>

@@ -313,8 +313,8 @@ export function TodayView({
       return;
     }
     const pct = parseNum(pctInput);
-    if (!(pct > 0) || pct > 100) {
-      setTempErrorMsg('Entre un pourcentage entre 1 et 100 (ex : 25).');
+    if (!(pct > 0)) {
+      setTempErrorMsg('Entre un pourcentage supérieur à 0 (ex : 25, 100, 150).');
       pctInputRef.current?.focus();
       return;
     }

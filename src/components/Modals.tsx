@@ -1,5 +1,5 @@
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Globe, Loader2, Pencil, Search, Trash2, X } from 'lucide-react';
+import { Globe, Loader2, Pencil, ScanBarcode, Search, Trash2, X } from 'lucide-react';
 import type {
   DrinkCategory,
   Food,
@@ -20,9 +20,12 @@ import {
 } from '../utils/nutrition';
 import {
   type OpenFoodFactsProduct,
+  isBarcodeQuery,
+  lookupProductByBarcode,
   searchCiqualFoods,
-  searchOpenFoodFacts,
+  searchCiqualOrBarcode,
 } from '../utils/openFoodFacts';
+import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { TempMealBuilder } from './TempMealModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
@@ -239,6 +242,7 @@ interface FoodFormModalProps {
   foods?: Food[];
   helperNotice?: string;
   autoFocusOff?: boolean;
+  autoOpenScanner?: boolean;
   onClose: () => void;
   onSave: (data: Omit<Food, 'id'>, existingId?: string) => void;
   onSaveTempMeal?: (
@@ -255,6 +259,7 @@ export function FoodFormModal({
   foods = [],
   helperNotice,
   autoFocusOff,
+  autoOpenScanner,
   onClose,
   onSave,
   onSaveTempMeal,
@@ -270,12 +275,13 @@ export function FoodFormModal({
   const [drinkCat, setDrinkCat] = useState<DrinkCategory | ''>('');
   const [error, setError] = useState('');
 
-  // Open Food Facts search state
+  // Ciqual + Barcode lookup state
   const [offQuery, setOffQuery] = useState('');
   const [offLoading, setOffLoading] = useState(false);
   const [offError, setOffError] = useState('');
   const [offResults, setOffResults] = useState<OpenFoodFactsProduct[]>([]);
   const [offInfo, setOffInfo] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const offRef = useRef<HTMLInputElement>(null);
@@ -305,18 +311,27 @@ export function FoodFormModal({
       setOffError('');
       setOffResults([]);
       setOffInfo('');
-      if (nextTab === 'food' && autoFocusOff) {
+      setScannerOpen(Boolean(nextTab === 'food' && autoOpenScanner));
+      if (nextTab === 'food' && autoFocusOff && !autoOpenScanner) {
         setTimeout(() => {
           offRef.current?.focus();
         }, 20);
       }
     } else {
+      setScannerOpen(false);
       abortRef.current?.abort();
     }
     return () => {
       abortRef.current?.abort();
     };
-  }, [open, editingFood, editingTempMeal, initialFormTab, autoFocusOff]);
+  }, [
+    open,
+    editingFood,
+    editingTempMeal,
+    initialFormTab,
+    autoFocusOff,
+    autoOpenScanner,
+  ]);
 
   if (!open) return null;
 
@@ -341,7 +356,7 @@ export function FoodFormModal({
   const handleSearchOff = async () => {
     const q = offQuery.trim();
     if (!q) {
-      setOffError('Entre un nom d’aliment ou un code-barres.');
+      setOffError('Entre un nom d’aliment (Ciqual) ou un code-barres.');
       return;
     }
     abortRef.current?.abort();
@@ -351,18 +366,55 @@ export function FoodFormModal({
     setOffError('');
     setOffInfo('');
     try {
-      const results = await searchOpenFoodFacts(q, ctrl.signal);
+      const results = await searchCiqualOrBarcode(q, ctrl.signal);
       setOffResults(results);
       if (results.length === 0) {
-        setOffError('Aucun aliment trouvé dans Ciqual ni sur Open Food Facts.');
+        setOffError(
+          isBarcodeQuery(q)
+            ? `Aucun produit trouvé pour le code-barres ${q}.`
+            : 'Aucun aliment trouvé dans la base Ciqual.'
+        );
       }
     } catch (err) {
       if (err instanceof Error) {
         setOffError(err.message);
       } else {
-        setOffError('Erreur lors de la recherche en ligne.');
+        setOffError('Erreur lors de la recherche.');
       }
       setOffResults([]);
+    } finally {
+      setOffLoading(false);
+    }
+  };
+
+  const handleBarcodeDetected = async (code: string) => {
+    setScannerOpen(false);
+    setOffQuery(code);
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    setOffLoading(true);
+    setOffError('');
+    setOffInfo('');
+    setOffResults([]);
+    try {
+      const product = await lookupProductByBarcode(code, ctrl.signal);
+      if (product) {
+        handleApplyOffProduct(product);
+        setOffInfo(
+          `Code-barres ${code} importé — vérifie les valeurs et enregistre.`
+        );
+      } else {
+        setOffError(
+          `Aucun produit trouvé pour le code-barres ${code}. Tu peux le saisir manuellement ci-dessous.`
+        );
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        setOffError(err.message);
+      } else {
+        setOffError('Erreur lors de la lecture du code-barres.');
+      }
     } finally {
       setOffLoading(false);
     }
@@ -388,7 +440,7 @@ export function FoodFormModal({
     setOffInfo(
       isCiqual
         ? 'Valeurs importées depuis la table Ciqual (ANSES) — vérifie et enregistre.'
-        : 'Valeurs importées depuis Open Food Facts — vérifie et enregistre.'
+        : 'Produit importé via code-barres — vérifie et enregistre.'
     );
   };
 
@@ -499,7 +551,7 @@ export function FoodFormModal({
               </p>
             )}
 
-            {/* Ciqual ANSES + Barcode Lookup */}
+            {/* Ciqual ANSES + Barcode Scanner */}
             <div className="mt-3.5 rounded-xl border border-[#DCE5DF] bg-[#F7FAF8] p-3 dark:border-[#25332B] dark:bg-[#121B16]">
           <label
             htmlFor="off-search-input"
@@ -509,7 +561,7 @@ export function FoodFormModal({
               className="h-3.5 w-3.5 text-[#0D9464] dark:text-[#34D399]"
               aria-hidden="true"
             />
-            Base Ciqual (ANSES) &amp; code-barres
+            Base Ciqual (ANSES) &amp; scan code-barres
           </label>
           <div className="flex gap-1.5">
             <input
@@ -524,14 +576,14 @@ export function FoodFormModal({
                   void handleSearchOff();
                 }
               }}
-              placeholder="Ex : morue, yaourt grec, ou code-barres…"
-              className="min-h-[38px] flex-1 rounded-lg border border-[#D4DFD8] bg-white px-2.5 text-xs text-[#14231C] placeholder:text-[#7D9186] focus:border-[#0D9464] focus:outline-none dark:border-[#2C3C32] dark:bg-[#16211B] dark:text-[#EAF2ED] dark:focus:border-[#34D399]"
+              placeholder="Nom (Ciqual) ou code-barres…"
+              className="min-h-[40px] flex-1 min-w-0 rounded-lg border border-[#D4DFD8] bg-white px-2.5 text-xs text-[#14231C] placeholder:text-[#7D9186] focus:border-[#0D9464] focus:outline-none dark:border-[#2C3C32] dark:bg-[#16211B] dark:text-[#EAF2ED] dark:focus:border-[#34D399]"
             />
             <button
               type="button"
               disabled={offLoading}
               onClick={() => void handleSearchOff()}
-              className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-[#0D9464] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0A7A52] disabled:opacity-60 dark:bg-[#10B981] dark:text-[#072216] dark:hover:bg-[#34D399] cursor-pointer shrink-0"
+              className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg bg-[#0D9464] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0A7A52] disabled:opacity-60 dark:bg-[#10B981] dark:text-[#072216] dark:hover:bg-[#34D399] cursor-pointer shrink-0"
             >
               {offLoading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -541,6 +593,16 @@ export function FoodFormModal({
               <span>Chercher</span>
             </button>
           </div>
+
+          <button
+            type="button"
+            disabled={offLoading}
+            onClick={() => setScannerOpen(true)}
+            className="mt-2 flex min-h-[40px] w-full items-center justify-center gap-2 rounded-lg border border-[#CBE4D6] bg-white px-3 text-xs font-semibold text-[#0B7B54] transition-colors hover:bg-[#ECF8F1] disabled:opacity-60 dark:border-[#254736] dark:bg-[#16211B] dark:text-[#34D399] dark:hover:bg-[#1B3327] cursor-pointer"
+          >
+            <ScanBarcode className="h-4 w-4" aria-hidden="true" />
+            Scanner un code-barres (caméra / photo)
+          </button>
 
           {offError && (
             <p className="mt-2 text-[11px] font-medium text-[#C63B31] dark:text-[#FCA5A5]">
@@ -708,6 +770,12 @@ export function FoodFormModal({
           </>
         )}
       </div>
+
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onDetected={(code) => void handleBarcodeDetected(code)}
+      />
     </div>
   );
 }
@@ -999,10 +1067,6 @@ export function EntryEditModal({
               ? 'Entre un nombre d’unités (ex : 2).'
               : 'Entre une quantité en grammes (ex : 100).'
       );
-      return;
-    }
-    if (isPctEntry && parsed > 100) {
-      setError('Le pourcentage doit être compris entre 1 et 100.');
       return;
     }
     if (isPctEntry) {

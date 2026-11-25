@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { Goals, LogEntry, WeightEntry } from '../types/nutrition';
 import {
   dateKey,
@@ -28,6 +28,7 @@ export function SuiviView({
 }: SuiviViewProps) {
   const [hoveredDayIdx, setHoveredDayIdx] = useState<number | null>(null);
   const [hoveredWeightIdx, setHoveredWeightIdx] = useState<number | null>(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const days14 = useMemo(() => {
     const now = new Date();
@@ -425,54 +426,99 @@ export function SuiviView({
 
       {/* Meal History */}
       <section className="rounded-2xl border border-[#E2EAE5] bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(16,40,28,0.04)] dark:border-[#25332B] dark:bg-[#16211B] dark:shadow-none">
-        <h2 className="mb-3 text-base font-bold text-[#14231C] dark:text-[#EAF2ED]">
-          Historique des repas
-        </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-[#14231C] dark:text-[#EAF2ED]">
+            Historique des repas
+          </h2>
+          {historyKeys.length > 3 && (
+            <button
+              type="button"
+              onClick={() => setShowAllHistory((prev) => !prev)}
+              aria-expanded={showAllHistory}
+              className="inline-flex min-h-[36px] items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-[#0D9464] transition-colors hover:bg-[#ECF8F1] dark:text-[#34D399] dark:hover:bg-[#193528] cursor-pointer"
+            >
+              <span>
+                {showAllHistory
+                  ? 'Réduire'
+                  : `Tout voir (${historyKeys.length})`}
+              </span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform ${
+                  showAllHistory ? 'rotate-180' : ''
+                }`}
+                aria-hidden="true"
+              />
+            </button>
+          )}
+        </div>
 
         {historyKeys.length === 0 ? (
           <p className="text-sm text-[#5B6E64] dark:text-[#98ABA0]">
             Aucun historique pour l’instant.
           </p>
         ) : (
-          <ul className="divide-y divide-[#EDF2EE] dark:divide-[#233229]">
-            {historyKeys.map((dk) => {
-              const t = dayTotals(log[dk]);
-              return (
-                <li key={dk}>
-                  <button
-                    type="button"
-                    onClick={() => onOpenDay(dk)}
-                    aria-haspopup="dialog"
-                    className="flex min-h-[56px] w-full items-center justify-between gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-[#F5F9F6] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0D9464] dark:hover:bg-[#1C2A22] cursor-pointer"
-                  >
-                    <div className="min-w-0">
-                      <span className="block text-sm font-semibold text-[#14231C] dark:text-[#EAF2ED]">
-                        {formatDayLabel(dk)}
-                      </span>
-                      <span className="mt-0.5 block text-xs tabular-nums text-[#5B6E64] dark:text-[#98ABA0]">
-                        Prot. {formatDecimalFr(t.p)} · Glu. {formatDecimalFr(t.c)} ·
-                        Lip. {formatDecimalFr(t.f)}
-                        {t.al
-                          ? ` · Alc ${formatDecimalFr(t.al / 10)} d (${Math.round(
-                              t.al * 7
-                            )} kcal)`
-                          : ''}
-                      </span>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className="text-sm font-bold tabular-nums text-[#14231C] dark:text-[#EAF2ED]">
-                        {Math.round(t.k)} kcal
-                      </span>
-                      <ChevronRight
-                        className="h-4 w-4 text-[#7D9186]"
-                        aria-hidden="true"
-                      />
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <ul className="divide-y divide-[#EDF2EE] dark:divide-[#233229]">
+              {(showAllHistory ? historyKeys : historyKeys.slice(0, 3)).map((dk) => {
+                const t = dayTotals(log[dk]);
+                return (
+                  <li key={dk}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenDay(dk)}
+                      aria-haspopup="dialog"
+                      className="flex min-h-[56px] w-full items-center justify-between gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-[#F5F9F6] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0D9464] dark:hover:bg-[#1C2A22] cursor-pointer"
+                    >
+                      <div className="min-w-0">
+                        <span className="block text-sm font-semibold text-[#14231C] dark:text-[#EAF2ED]">
+                          {formatDayLabel(dk)}
+                        </span>
+                        <span className="mt-0.5 block text-xs tabular-nums text-[#5B6E64] dark:text-[#98ABA0]">
+                          Prot. {formatDecimalFr(t.p)} · Glu. {formatDecimalFr(t.c)} ·
+                          Lip. {formatDecimalFr(t.f)}
+                          {t.al
+                            ? ` · Alc ${formatDecimalFr(t.al / 10)} d (${Math.round(
+                                t.al * 7
+                              )} kcal)`
+                            : ''}
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-sm font-bold tabular-nums text-[#14231C] dark:text-[#EAF2ED]">
+                          {Math.round(t.k)} kcal
+                        </span>
+                        <ChevronRight
+                          className="h-4 w-4 text-[#7D9186]"
+                          aria-hidden="true"
+                        />
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {historyKeys.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setShowAllHistory((prev) => !prev)}
+                aria-expanded={showAllHistory}
+                className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-[#DCE5DF] bg-[#FAFDFB] px-4 py-2 text-xs font-semibold text-[#394B42] transition-colors hover:bg-[#EDF3EF] dark:border-[#2C3C32] dark:bg-[#111A15] dark:text-[#C5D4CB] dark:hover:bg-[#1D2B23] cursor-pointer"
+              >
+                <span>
+                  {showAllHistory
+                    ? 'Afficher uniquement les 3 derniers'
+                    : `Voir les ${historyKeys.length - 3} autres jours`}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    showAllHistory ? 'rotate-180' : ''
+                  }`}
+                  aria-hidden="true"
+                />
+              </button>
+            )}
+          </>
         )}
       </section>
     </div>

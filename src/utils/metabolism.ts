@@ -13,11 +13,13 @@ export interface MetabolismOptions {
 
 export interface MetabolismPrerequisites {
   effectiveDays: number;
+  targetSpanDays: number;
   minSpanDays: number;
   weightSpanDays: number;
   weightCount: number;
   minWeightCount: number;
   validIntakeCount: number;
+  minValidIntakeCount: number;
   coverageRatio: number;
   minCoverageRatio: number;
   hasEnoughSpan: boolean;
@@ -44,11 +46,28 @@ export interface MetabolismEstimate {
 }
 
 const KCAL_PER_KG = 7700;
-const MIN_SPAN_DAYS = 14;
-const MIN_WEIGHT_SPAN_DAYS = 13; // 14 calendar days inclusive
-const MIN_WEIGHT_COUNT = 4;
 const MIN_COVERAGE_RATIO = 0.7;
 export const DEFAULT_MIN_KCAL_FLOOR = 500;
+
+function getWindowRequirements(windowDays: MetabolismWindow): {
+  targetSpanDays: number;
+  minSpanDays: number;
+  minWeightSpanDays: number;
+  minWeightCount: number;
+} {
+  switch (windowDays) {
+    case 21:
+      return { targetSpanDays: 21, minSpanDays: 15, minWeightSpanDays: 14, minWeightCount: 4 };
+    case 28:
+      return { targetSpanDays: 28, minSpanDays: 20, minWeightSpanDays: 19, minWeightCount: 4 };
+    case 60:
+      return { targetSpanDays: 60, minSpanDays: 42, minWeightSpanDays: 41, minWeightCount: 6 };
+    case 90:
+      return { targetSpanDays: 90, minSpanDays: 63, minWeightSpanDays: 62, minWeightCount: 8 };
+    case 'all':
+      return { targetSpanDays: 14, minSpanDays: 14, minWeightSpanDays: 13, minWeightCount: 4 };
+  }
+}
 
 function parseDayMs(dk: string): number {
   return new Date(`${dk}T00:00:00`).getTime();
@@ -71,6 +90,7 @@ export function computeMetabolismEstimate(
     anchorDateKey = todayKey(),
   } = options;
 
+  const req = getWindowRequirements(windowDays);
   const windowEnd = anchorDateKey;
   const numericWindowStart =
     windowDays === 'all' ? null : shiftDateKey(anchorDateKey, -(windowDays - 1));
@@ -153,23 +173,26 @@ export function computeMetabolismEstimate(
 
   const coverageRatio =
     effectiveDays > 0 ? Math.min(1, validIntakes.length / effectiveDays) : 0;
+  const minValidIntakeCount = Math.ceil(req.minSpanDays * MIN_COVERAGE_RATIO);
 
   const hasEnoughSpan =
-    effectiveDays >= MIN_SPAN_DAYS && weightSpanDays >= MIN_WEIGHT_SPAN_DAYS;
-  const hasEnoughWeights = windowWeights.length >= MIN_WEIGHT_COUNT;
+    effectiveDays >= req.minSpanDays && weightSpanDays >= req.minWeightSpanDays;
+  const hasEnoughWeights = windowWeights.length >= req.minWeightCount;
   const hasEnoughCoverage =
-    validIntakes.length >= Math.ceil(MIN_SPAN_DAYS * MIN_COVERAGE_RATIO) &&
+    validIntakes.length >= minValidIntakeCount &&
     coverageRatio >= MIN_COVERAGE_RATIO;
 
   const ready = hasEnoughSpan && hasEnoughWeights && hasEnoughCoverage;
 
   const prerequisites: MetabolismPrerequisites = {
     effectiveDays,
-    minSpanDays: MIN_SPAN_DAYS,
+    targetSpanDays: req.targetSpanDays,
+    minSpanDays: req.minSpanDays,
     weightSpanDays,
     weightCount: windowWeights.length,
-    minWeightCount: MIN_WEIGHT_COUNT,
+    minWeightCount: req.minWeightCount,
     validIntakeCount: validIntakes.length,
+    minValidIntakeCount,
     coverageRatio,
     minCoverageRatio: MIN_COVERAGE_RATIO,
     hasEnoughSpan,

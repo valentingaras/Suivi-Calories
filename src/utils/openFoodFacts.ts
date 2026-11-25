@@ -163,6 +163,9 @@ export async function searchCiqualFoods(
 
 async function fetchJsonSafe(url: string, signal: AbortSignal): Promise<unknown> {
   const res = await fetch(url, { signal });
+  if (res.status === 404) {
+    return null;
+  }
   if (!res.ok) {
     throw new Error('Serveur Open Food Facts temporairement indisponible.');
   }
@@ -176,16 +179,20 @@ async function fetchJsonSafe(url: string, signal: AbortSignal): Promise<unknown>
   return JSON.parse(text) as unknown;
 }
 
-export async function searchOpenFoodFactsOnly(
-  query: string,
+export function isBarcodeQuery(query: string): boolean {
+  return /^\d{8,14}$/.test(query.trim());
+}
+
+export async function lookupProductByBarcode(
+  barcode: string,
   signal?: AbortSignal
-): Promise<OpenFoodFactsProduct[]> {
-  const trimmed = query.trim();
-  if (!trimmed) return [];
+): Promise<OpenFoodFactsProduct | null> {
+  const trimmed = barcode.trim();
+  if (!isBarcodeQuery(trimmed)) return null;
 
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     throw new Error(
-      'Hors ligne : une connexion Internet est requise pour interroger Open Food Facts.'
+      'Hors ligne : une connexion Internet est requise pour lire un code-barres.'
     );
   }
 
@@ -195,67 +202,40 @@ export async function searchOpenFoodFactsOnly(
   signal?.addEventListener('abort', onExternalAbort);
 
   try {
-    const isBarcode = /^\d{8,14}$/.test(trimmed);
     const fields =
       'code,product_name,product_name_fr,brands,nutriments,quantity';
-
-    if (isBarcode) {
-      const url = `https://fr.openfoodfacts.org/api/v2/product/${encodeURIComponent(
-        trimmed
-      )}.json?fields=${fields}`;
-      const data = (await fetchJsonSafe(url, controller.signal)) as {
-        status?: number;
-        product?: RawOFFProduct;
-      };
-      if (!data.product) return [];
-      const mapped = mapRawProduct(data.product);
-      return mapped ? [mapped] : [];
-    }
-
-    const url = `https://fr.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
+    const url = `https://fr.openfoodfacts.org/api/v2/product/${encodeURIComponent(
       trimmed
-    )}&search_simple=1&action=process&json=1&page_size=12&fields=${fields}`;
+    )}.json?fields=${fields}`;
     const data = (await fetchJsonSafe(url, controller.signal)) as {
-      products?: RawOFFProduct[];
-    };
-    const products = Array.isArray(data.products) ? data.products : [];
-    const results: OpenFoodFactsProduct[] = [];
-    for (const raw of products) {
-      const mapped = mapRawProduct(raw);
-      if (mapped) results.push(mapped);
-    }
-    return results;
+      status?: number;
+      product?: RawOFFProduct;
+    } | null;
+    if (!data || !data.product) return null;
+    return mapRawProduct(data.product);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error('La recherche Open Food Facts a expiré ou été annulée.');
+      throw new Error('La recherche du code-barres a expiré ou été annulée.');
     }
     if (err instanceof Error) throw err;
-    throw new Error('Erreur lors de la recherche Open Food Facts.');
+    throw new Error('Erreur lors de la lecture du code-barres.');
   } finally {
     clearTimeout(timeoutId);
     signal?.removeEventListener('abort', onExternalAbort);
   }
 }
 
-export async function searchOpenFoodFacts(
+export async function searchCiqualOrBarcode(
   query: string,
   signal?: AbortSignal
 ): Promise<OpenFoodFactsProduct[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  if (/^\d{8,14}$/.test(trimmed)) {
-    return searchOpenFoodFactsOnly(trimmed, signal);
+  if (isBarcodeQuery(trimmed)) {
+    const product = await lookupProductByBarcode(trimmed, signal);
+    return product ? [product] : [];
   }
 
-  const ciqualResults = await searchCiqualFoods(trimmed);
-  if (ciqualResults.length > 0) {
-    return ciqualResults;
-  }
-
-  // Fallback to Open Food Facts only if nothing matched Ciqual and online
-  if (typeof navigator === 'undefined' || navigator.onLine) {
-    return searchOpenFoodFactsOnly(trimmed, signal);
-  }
-  return [];
+  return searchCiqualFoods(trimmed);
 }

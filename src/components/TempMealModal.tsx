@@ -40,6 +40,7 @@ export function TempMealBuilder({
   const [ingUnitMode, setIngUnitMode] = useState<'g' | 'unit'>('g');
 
   // Custom / free macros state
+  const [customBasis, setCustomBasis] = useState<'per100g' | 'total'>('per100g');
   const [customLabel, setCustomLabel] = useState('');
   const [customKcal, setCustomKcal] = useState('');
   const [customProt, setCustomProt] = useState('');
@@ -59,6 +60,7 @@ export function TempMealBuilder({
     setDropdownOpen(false);
     setIngGrams('');
     setIngUnitMode('g');
+    setCustomBasis('per100g');
     setCustomLabel('');
     setCustomKcal('');
     setCustomProt('');
@@ -145,38 +147,103 @@ export function TempMealBuilder({
     setDropdownOpen(false);
   };
 
-  const buildPendingCustomItem = (): TempMealItem | null => {
-    const p = Math.max(0, parseNum(customProt));
-    const c = Math.max(0, parseNum(customCarb));
-    const f = Math.max(0, parseNum(customFat));
-    const rawK = parseNum(customKcal);
-    const hasKInput = customKcal.trim() !== '' && rawK >= 0;
-    const k = hasKInput
-      ? Math.round(rawK)
-      : Math.round(p * 4 + c * 4 + f * 9);
-    const g = Math.max(0, parseNum(customGrams));
+  const parseOptionalZero = (raw: string): number => {
+    if (raw.trim() === '') return 0;
+    const n = parseNum(raw);
+    return Number.isFinite(n) ? n : NaN;
+  };
 
-    if (k <= 0 && p <= 0 && c <= 0 && f <= 0) {
-      return null;
+  const buildPendingCustomItem = (): {
+    item: TempMealItem | null;
+    errorMsg?: string;
+  } => {
+    const p = parseOptionalZero(customProt);
+    const c = parseOptionalZero(customCarb);
+    const f = parseOptionalZero(customFat);
+    const g = parseOptionalZero(customGrams);
+    const hasKInput = customKcal.trim() !== '';
+    const rawK = hasKInput ? parseNum(customKcal) : 0;
+
+    if ([p, c, f, g, rawK].some(Number.isNaN)) {
+      return {
+        item: null,
+        errorMsg: 'Vérifie que les valeurs saisies sont des nombres positifs.',
+      };
+    }
+
+    const baseK = hasKInput ? rawK : p * 4 + c * 4 + f * 9;
+    if (baseK <= 0 && p <= 0 && c <= 0 && f <= 0) {
+      return {
+        item: null,
+        errorMsg: 'Entre au moins les calories ou une valeur de macros (P, G, L).',
+      };
+    }
+
+    if (customBasis === 'per100g') {
+      if (!(g > 0)) {
+        return {
+          item: null,
+          errorMsg:
+            'Entre le poids en grammes (ex : 390) pour calculer le total à partir des valeurs pour 100 g.',
+        };
+      }
+      const ratio = g / 100;
+      return {
+        item: {
+          id: `tmi_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          kind: 'custom',
+          n: capitalizeFoodName(customLabel) || 'Macros libres',
+          g: round1(g),
+          k: Math.round(baseK * ratio),
+          p: round1(p * ratio),
+          c: round1(c * ratio),
+          f: round1(f * ratio),
+        },
+      };
     }
 
     return {
-      id: `tmi_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      kind: 'custom',
-      n: capitalizeFoodName(customLabel) || 'Macros libres',
-      g: round1(g),
-      k,
-      p: round1(p),
-      c: round1(c),
-      f: round1(f),
+      item: {
+        id: `tmi_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        kind: 'custom',
+        n: capitalizeFoodName(customLabel) || 'Macros libres',
+        g: round1(g),
+        k: Math.round(baseK),
+        p: round1(p),
+        c: round1(c),
+        f: round1(f),
+      },
     };
   };
 
+  const customLiveTotal = useMemo(() => {
+    if (customBasis !== 'per100g') return null;
+    const p = parseOptionalZero(customProt);
+    const c = parseOptionalZero(customCarb);
+    const f = parseOptionalZero(customFat);
+    const g = parseOptionalZero(customGrams);
+    const hasKInput = customKcal.trim() !== '';
+    const rawK = hasKInput ? parseNum(customKcal) : 0;
+    if ([p, c, f, g, rawK].some(Number.isNaN) || !(g > 0)) return null;
+    const baseK = hasKInput ? rawK : p * 4 + c * 4 + f * 9;
+    if (baseK <= 0 && p <= 0 && c <= 0 && f <= 0) return null;
+    const ratio = g / 100;
+    return {
+      g: round1(g),
+      k: Math.round(baseK * ratio),
+      p: round1(p * ratio),
+      c: round1(c * ratio),
+      f: round1(f * ratio),
+    };
+  }, [customBasis, customProt, customCarb, customFat, customGrams, customKcal]);
+
   const handleAddCustomItem = () => {
     setError('');
-    const item = buildPendingCustomItem();
+    const { item, errorMsg } = buildPendingCustomItem();
     if (!item) {
-      setError('Entre au moins les calories ou une valeur de macros (P, G, L).');
+      setError(
+        errorMsg || 'Entre au moins les calories ou une valeur de macros (P, G, L).'
+      );
       return;
     }
     setItems((prev) => [...prev, item]);
@@ -203,9 +270,19 @@ export function TempMealBuilder({
 
     let finalItems = items;
     if (finalItems.length === 0 && addMode === 'custom') {
-      const pendingCustom = buildPendingCustomItem();
-      if (pendingCustom) {
-        finalItems = [pendingCustom];
+      const hasAnyCustomField = [
+        customKcal,
+        customProt,
+        customCarb,
+        customFat,
+        customGrams,
+      ].some((v) => v.trim() !== '');
+      const pending = buildPendingCustomItem();
+      if (pending.item) {
+        finalItems = [pending.item];
+      } else if (hasAnyCustomField && pending.errorMsg) {
+        setError(pending.errorMsg);
+        return;
       }
     }
 
@@ -414,28 +491,78 @@ export function TempMealBuilder({
             </div>
           ) : (
             <div className="mt-3 space-y-2.5">
+              {/* Mode selector: Pour 100 g vs Total de la portion */}
+              <div
+                role="group"
+                aria-label="Base de saisie des macros"
+                className="grid grid-cols-2 gap-1 rounded-lg bg-[#E9F0EC] p-0.5 dark:bg-[#1C2821]"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomBasis('per100g');
+                    setError('');
+                  }}
+                  className={`min-h-[32px] rounded-md px-2 text-xs font-semibold transition-colors cursor-pointer ${
+                    customBasis === 'per100g'
+                      ? 'bg-white text-[#0B7B54] shadow-xs dark:bg-[#16211B] dark:text-[#34D399]'
+                      : 'text-[#55685E] hover:text-[#14231C] dark:text-[#98ABA0]'
+                  }`}
+                >
+                  Valeurs pour 100 g
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomBasis('total');
+                    setError('');
+                  }}
+                  className={`min-h-[32px] rounded-md px-2 text-xs font-semibold transition-colors cursor-pointer ${
+                    customBasis === 'total'
+                      ? 'bg-white text-[#0B7B54] shadow-xs dark:bg-[#16211B] dark:text-[#34D399]'
+                      : 'text-[#55685E] hover:text-[#14231C] dark:text-[#98ABA0]'
+                  }`}
+                >
+                  Total du plat / portion
+                </button>
+              </div>
+
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <input
-                  type="text"
-                  value={customLabel}
-                  onChange={(e) => setCustomLabel(e.target.value)}
-                  placeholder="Libellé (ex : Sauce, Plat entier…)"
-                  className="min-h-[40px] w-full rounded-xl border border-[#D4DFD8] bg-white px-3 text-sm text-[#14231C] placeholder:text-[#7D9186] focus:border-[#0D9464] focus:outline-none dark:border-[#2C3C32] dark:bg-[#16211B] dark:text-[#EAF2ED]"
-                />
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={customGrams}
-                  onChange={(e) => setCustomGrams(e.target.value)}
-                  placeholder="Poids (g) — facultatif"
-                  className="min-h-[40px] w-full rounded-xl border border-[#D4DFD8] bg-white px-3 text-sm tabular-nums text-[#14231C] placeholder:text-[#7D9186] focus:border-[#0D9464] focus:outline-none dark:border-[#2C3C32] dark:bg-[#16211B] dark:text-[#EAF2ED]"
-                />
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-[#52655B] dark:text-[#98ABA0]">
+                    Libellé (facultatif)
+                  </label>
+                  <input
+                    type="text"
+                    value={customLabel}
+                    onChange={(e) => setCustomLabel(e.target.value)}
+                    placeholder="Ex : Pizza, Sauce…"
+                    className="min-h-[40px] w-full rounded-xl border border-[#D4DFD8] bg-white px-3 text-sm text-[#14231C] placeholder:text-[#7D9186] focus:border-[#0D9464] focus:outline-none dark:border-[#2C3C32] dark:bg-[#16211B] dark:text-[#EAF2ED]"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-[#52655B] dark:text-[#98ABA0]">
+                    {customBasis === 'per100g'
+                      ? 'Poids total (g) *'
+                      : 'Poids (g) — facultatif'}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={customGrams}
+                    onChange={(e) => setCustomGrams(e.target.value)}
+                    placeholder={
+                      customBasis === 'per100g' ? 'Ex : 390' : 'Facultatif'
+                    }
+                    className="min-h-[40px] w-full rounded-xl border border-[#D4DFD8] bg-white px-3 text-sm tabular-nums text-[#14231C] placeholder:text-[#7D9186] focus:border-[#0D9464] focus:outline-none dark:border-[#2C3C32] dark:bg-[#16211B] dark:text-[#EAF2ED]"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <div>
                   <label className="mb-1 block text-[11px] font-medium text-[#52655B] dark:text-[#98ABA0]">
-                    Calories (kcal)
+                    {customBasis === 'per100g' ? 'kcal / 100 g' : 'Calories (kcal)'}
                   </label>
                   <input
                     type="text"
@@ -448,7 +575,7 @@ export function TempMealBuilder({
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] font-medium text-[#52655B] dark:text-[#98ABA0]">
-                    Protéines (g)
+                    {customBasis === 'per100g' ? 'Prot. / 100 g' : 'Protéines (g)'}
                   </label>
                   <input
                     type="text"
@@ -461,7 +588,7 @@ export function TempMealBuilder({
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] font-medium text-[#52655B] dark:text-[#98ABA0]">
-                    Glucides (g)
+                    {customBasis === 'per100g' ? 'Gluc. / 100 g' : 'Glucides (g)'}
                   </label>
                   <input
                     type="text"
@@ -474,7 +601,7 @@ export function TempMealBuilder({
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] font-medium text-[#52655B] dark:text-[#98ABA0]">
-                    Lipides (g)
+                    {customBasis === 'per100g' ? 'Lip. / 100 g' : 'Lipides (g)'}
                   </label>
                   <input
                     type="text"
@@ -486,6 +613,16 @@ export function TempMealBuilder({
                   />
                 </div>
               </div>
+
+              {customLiveTotal && (
+                <p className="rounded-lg bg-[#ECF8F1] px-3 py-2 text-xs font-medium tabular-nums text-[#0B7B54] dark:bg-[#153125] dark:text-[#34D399]">
+                  Total calculé pour {formatDecimalFr(customLiveTotal.g)} g :{' '}
+                  <strong>{customLiveTotal.k} kcal</strong> · P{' '}
+                  {formatDecimalFr(customLiveTotal.p)} g · G{' '}
+                  {formatDecimalFr(customLiveTotal.c)} g · L{' '}
+                  {formatDecimalFr(customLiveTotal.f)} g
+                </p>
+              )}
 
               <button
                 type="button"

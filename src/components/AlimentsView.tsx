@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { ChevronRight, Globe, Plus, Search, Upload } from 'lucide-react';
+import { ChevronRight, Globe, Plus, ScanBarcode, Search, Upload } from 'lucide-react';
 import { formatDecimalFr, normText, parseFoodsCsv } from '../utils/nutrition';
 import type { Food, TempMeal } from '../types/nutrition';
 
@@ -9,6 +9,7 @@ interface AlimentsViewProps {
   onNewFood: () => void;
   onNewTempMeal: () => void;
   onSearchOnline: () => void;
+  onScanBarcode: () => void;
   onSelectFood: (food: Food) => void;
   onSelectTempMeal: (dish: TempMeal) => void;
   onImportCsvFoods: (importedFoods: Food[]) => number;
@@ -20,6 +21,7 @@ export function AlimentsView({
   onNewFood,
   onNewTempMeal,
   onSearchOnline,
+  onScanBarcode,
   onSelectFood,
   onSelectTempMeal,
   onImportCsvFoods,
@@ -92,6 +94,15 @@ export function AlimentsView({
           >
             <Globe className="h-4 w-4" aria-hidden="true" />
             Ciqual
+          </button>
+
+          <button
+            type="button"
+            onClick={onScanBarcode}
+            className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-[#CBE4D6] bg-[#ECF8F1] px-3.5 py-2.5 text-sm font-semibold text-[#0B7B54] transition-colors hover:bg-[#DDF3E6] dark:border-[#214B39] dark:bg-[#153125] dark:text-[#34D399] dark:hover:bg-[#1B3D2E] whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            <ScanBarcode className="h-4 w-4" aria-hidden="true" />
+            Scanner
           </button>
 
           <button

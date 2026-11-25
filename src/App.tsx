@@ -56,6 +56,7 @@ export default function App() {
     editingTempMeal?: TempMeal | null;
     initialFormTab?: 'food' | 'temp';
     autoFocusOff?: boolean;
+    autoOpenScanner?: boolean;
     linkedEntry?: {
       date: string;
       entryId: string;
@@ -69,6 +70,7 @@ export default function App() {
     editingTempMeal: null,
     initialFormTab: 'food',
     autoFocusOff: false,
+    autoOpenScanner: false,
     linkedEntry: null,
   });
   const [actionFood, setActionFood] = useState<Food | null>(null);
@@ -611,6 +613,18 @@ export default function App() {
                 editingTempMeal: null,
                 initialFormTab: 'food',
                 autoFocusOff: true,
+                autoOpenScanner: false,
+                linkedEntry: null,
+              })
+            }
+            onScanBarcode={() =>
+              setFoodFormState({
+                open: true,
+                editing: null,
+                editingTempMeal: null,
+                initialFormTab: 'food',
+                autoFocusOff: false,
+                autoOpenScanner: true,
                 linkedEntry: null,
               })
             }
@@ -660,6 +674,7 @@ export default function App() {
         initialFormTab={foodFormState.initialFormTab}
         foods={state.foods}
         autoFocusOff={foodFormState.autoFocusOff}
+        autoOpenScanner={foodFormState.autoOpenScanner}
         helperNotice={
           foodFormState.linkedEntry
             ? 'Les modifications mettent à jour la base d’aliments et cette saisie.'
@@ -673,6 +688,7 @@ export default function App() {
             editingTempMeal: null,
             initialFormTab: 'food',
             autoFocusOff: false,
+            autoOpenScanner: false,
             linkedEntry: null,
           });
           if (returnEntry) {
